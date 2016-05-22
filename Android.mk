@@ -18,7 +18,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := volley
+LOCAL_MODULE := LeVolley
 LOCAL_SDK_VERSION := 17
 LOCAL_SRC_FILES := $(call all-java-files-under, src/main/java)
 
@@ -26,7 +26,7 @@ include $(BUILD_STATIC_JAVA_LIBRARY)
 
 # Include this library in the build server's output directory
 # TODO: Not yet.
-#$(call dist-for-goals, dist_files, $(LOCAL_BUILT_MODULE):volley.jar)
+#$(call dist-for-goals, dist_files, $(LOCAL_BUILT_MODULE):le-volley-common.jar)
 
 # Include build files in subdirectories
 include $(call all-makefiles-under,$(LOCAL_PATH))

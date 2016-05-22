@@ -56,6 +56,11 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         int PATCH = 7;
     }
 
+    public enum Type {
+        DEFAULT,
+        DOWNLOAD_SIZE,
+    }
+
     /** An event log tracing the lifetime of this request; for debugging. */
     private final MarkerLog mEventLog = MarkerLog.ENABLED ? new MarkerLog() : null;
 
@@ -65,6 +70,10 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     private final int mMethod;
 
+    /**
+     * request的类型
+     */
+    protected Type mType = Type.DEFAULT;
     /** URL of this request. */
     private final String mUrl;
 
@@ -138,6 +147,10 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     public int getMethod() {
         return mMethod;
+    }
+
+    public Type getType(){
+        return mType;
     }
 
     /**

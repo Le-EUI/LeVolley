@@ -19,6 +19,7 @@ package com.android.volley.toolbox;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.Request.Method;
+import com.android.volley.Request.Type;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -107,6 +108,16 @@ public class HurlStack implements HttpStack {
         setConnectionParametersForRequest(connection, request);
         // Initialize HttpResponse with data from the HttpURLConnection.
         ProtocolVersion protocolVersion = new ProtocolVersion("HTTP", 1, 1);
+
+        if (request.getType() == Type.DOWNLOAD_SIZE){
+            //　构建一个假的StatusLine
+            StatusLine statusLine = new BasicStatusLine(protocolVersion, HttpStatus.SC_OK, "");
+            BasicHttpEntity entity = new BasicHttpEntity();
+            entity.setContentLength(connection.getContentLength());
+            BasicHttpResponse response = new BasicHttpResponse(statusLine);
+            response.setEntity(entity);
+            return response;
+        }
         int responseCode = connection.getResponseCode();
         if (responseCode == -1) {
             // -1 is returned by getResponseCode() if the response code could not be retrieved.

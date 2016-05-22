@@ -16,6 +16,7 @@
 
 package com.android.volley;
 
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 
 import java.util.Collections;
@@ -33,13 +34,19 @@ public class NetworkResponse {
      * @param notModified True if the server returned a 304 and the data was already in cache
      * @param networkTimeMs Round-trip network time to receive network response
      */
-    public NetworkResponse(int statusCode, byte[] data, Map<String, String> headers,
-            boolean notModified, long networkTimeMs) {
+    public NetworkResponse(int statusCode, HttpResponse httpResponse, byte[] data, Map<String, String> headers,
+                           boolean notModified, long networkTimeMs) {
         this.statusCode = statusCode;
         this.data = data;
         this.headers = headers;
         this.notModified = notModified;
         this.networkTimeMs = networkTimeMs;
+        this.httpResponse = httpResponse;
+    }
+
+    public NetworkResponse(int statusCode, byte[] data, Map<String, String> headers,
+                           boolean notModified, long networkTimeMs) {
+        this(statusCode,null,data, headers, notModified, networkTimeMs);
     }
 
     public NetworkResponse(int statusCode, byte[] data, Map<String, String> headers,
@@ -69,5 +76,10 @@ public class NetworkResponse {
 
     /** Network roundtrip time in milliseconds. */
     public final long networkTimeMs;
+
+    /**
+     * network请求返回的response
+     */
+    public HttpResponse httpResponse;
 }
 
