@@ -6,6 +6,11 @@
 
     <uses-sdk android:minSdkVersion="8" />
 
-    <application />
+    <application>
+        <provider
+            android:name=".provider.DownloadProvider"
+            android:authorities="le.volley.providers.download"
+            android:exported="true" />
+    </application>
 
 </manifest>
