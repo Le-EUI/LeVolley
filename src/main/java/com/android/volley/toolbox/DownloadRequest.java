@@ -98,7 +98,7 @@ public class DownloadRequest extends Request<String>{
             RandomAccessFile randomAccessFile = null;
             try {
                 randomAccessFile = new RandomAccessFile(mFilePath, "rwd");
-                randomAccessFile.seek(mStartPos + mEndPos);
+                randomAccessFile.seek(mStartPos + mCompeleteSize);
                 InputStream inputStream = httpResponse.getEntity().getContent();
                 if (inputStream == null){
                     throw new ServerError();
@@ -106,6 +106,8 @@ public class DownloadRequest extends Request<String>{
                 if (isCanceled()) {
                     throw new CanceledError();
                 }
+                //跳过已经完成的
+                inputStream.skip(mCompeleteSize);
                 postProgress();
                 byte buffer[] = new byte[4 * 1024];
                 int length = 0;
