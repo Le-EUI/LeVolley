@@ -23,7 +23,6 @@ import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
 import com.android.volley.toolbox.HttpHeaderParser;
 
-import java.io.UnsupportedEncodingException;
 
 /**
  * A canned request for retrieving the response body at a given URL as a String.

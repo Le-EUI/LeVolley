@@ -23,7 +23,9 @@ import android.os.Looper;
 import android.text.TextUtils;
 
 import com.android.volley.VolleyLog.MarkerLog;
+import org.apache.http.HttpResponse;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Collections;
@@ -59,6 +61,8 @@ public abstract class Request<T> implements Comparable<Request<T>> {
     public enum Type {
         DEFAULT,
         DOWNLOAD_SIZE,
+        DOWNLOAD,
+        UPLOAD,
     }
 
     /** An event log tracing the lifetime of this request; for debugging. */
@@ -585,6 +589,15 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     abstract protected void deliverResponse(T response);
 
+    /**
+     * override this to prevent default function: entity to bytes
+     *
+     * @param httpResponse
+     * @return byte[] return null if you do not handle this
+     */
+    public byte[] handleRawResponse(HttpResponse httpResponse) throws IOException, ServerError, CanceledError {
+        return new byte[0];
+    }
     /**
      * Delivers error message to the ErrorListener that the Request was
      * initialized with.
