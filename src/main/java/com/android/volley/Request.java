@@ -87,6 +87,9 @@ public abstract class Request<T> implements Comparable<Request<T>> {
     /** Listener interface for errors. */
     private final Response.ErrorListener mErrorListener;
 
+    /** Listener interface for loading. */
+    private Response.LoadingListener mLoadingListener;
+
     /** Sequence number of this request, used to enforce FIFO ordering. */
     private Integer mSequence;
 
@@ -118,6 +121,7 @@ public abstract class Request<T> implements Comparable<Request<T>> {
     /** An opaque token tagging this request; used for bulk cancellation. */
     private Object mTag;
 
+    private ResponseDelivery mResponseDelivery;
     /**
      * Creates a new request with the given URL and error listener.  Note that
      * the normal response listener is not provided here as delivery of responses
@@ -176,6 +180,11 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         return mTag;
     }
 
+    public Request<?> setLoadingListener(Response.LoadingListener loadingListener){
+        mLoadingListener = loadingListener;
+        return this;
+    }
+
     /**
      * @return this request's {@link com.android.volley.Response.ErrorListener}.
      */
@@ -205,6 +214,12 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         }
         return 0;
     }
+
+    public Request<?> setResponseDelivery(ResponseDelivery delivery) {
+        mResponseDelivery = delivery;
+        return this;
+    }
+
 
     /**
      * Sets the retry policy for this request.
@@ -610,6 +625,26 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         }
     }
 
+    protected void deliverProgress(Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+        if(mLoadingListener != null){
+            mLoadingListener.onLoading(type, startPos, endPos, completeSize, blockId, blockCount);
+        }
+    }
+
+    /**
+     * 发送loading 进度
+     * @param type
+     * @param startPos
+     * @param endPos
+     * @param completeSize
+     * @param blockId
+     * @param blockCount
+     */
+    public void postProgress(Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+        if (mLoadingListener != null && mResponseDelivery != null) {
+            mResponseDelivery.postProgress(this, type, startPos, endPos, completeSize, blockId, blockCount);
+        }
+    }
     /**
      * Our comparator sorts from high to low priority, and secondarily by
      * sequence number to provide FIFO ordering.

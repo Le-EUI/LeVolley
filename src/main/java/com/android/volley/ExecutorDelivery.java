@@ -69,6 +69,40 @@ public class ExecutorDelivery implements ResponseDelivery {
         mResponsePoster.execute(new ResponseDeliveryRunnable(request, response, null));
     }
 
+    @Override
+    public void postProgress(Request<?> request, Request.Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+        request.addMarker("post-progress");
+        mResponsePoster.execute(new ProgressDeliveryRunnable(request, type, startPos, endPos, completeSize, blockId, blockCount));
+    }
+
+    private class ProgressDeliveryRunnable implements Runnable {
+        private Request<?> mRequest;
+        private Request.Type type;
+        private long startPos;
+        private long endPos;
+        private long completeSize;
+        private int blockId;
+        private int blockCount;
+
+        public ProgressDeliveryRunnable(Request<?> request, Request.Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+            mRequest = request;
+            this.type = type;
+            this.startPos = startPos;
+            this.endPos = endPos;
+            this.completeSize = completeSize;
+            this.blockId = blockId;
+            this.blockCount = blockCount;
+        }
+
+        @Override
+        public void run() {
+            if (mRequest.isCanceled()) {
+                return;
+            }
+            mRequest.deliverProgress(type, startPos, endPos, completeSize, blockId, blockCount);
+        }
+    }
+
     /**
      * A Runnable used for delivering network responses to a listener on the
      * main thread.

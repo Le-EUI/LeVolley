@@ -16,6 +16,8 @@
 
 package com.android.volley;
 
+import com.android.volley.Request;
+
 /**
  * Encapsulates a parsed response for delivery.
  *
@@ -36,6 +38,20 @@ public class Response<T> {
          * provided error code and optional user-readable message.
          */
         public void onErrorResponse(VolleyError error);
+    }
+
+    /** loading listener*/
+    public interface LoadingListener{
+        /**
+         *
+         * @param type 加载类型　{@link Request.Type}
+         * @param startPos 起始位置
+         * @param endPos　结束位置
+         * @param completeSize　完成的大小
+         * @param blockId　划分块所在号
+         * @param blockCount　划分块总数
+         */
+        public void onLoading(Request.Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount);
     }
 
     /** Returns a successful response containing the parsed result. */

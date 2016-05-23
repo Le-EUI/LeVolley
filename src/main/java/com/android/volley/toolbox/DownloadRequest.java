@@ -25,7 +25,8 @@ public class DownloadRequest extends Request<String>{
     private long mStartPos;
     private long mEndPos;
     private long mCompeleteSize;
-    RandomAccessFile randomAccessFile = null;
+    private int mBlockId;
+    private int mBlockCount;
 
     /**
      * Creates a new request with the given method.
@@ -49,12 +50,14 @@ public class DownloadRequest extends Request<String>{
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadRequest(String url, String savePath, long startPos, long endPos, long completeSize, Listener<String> listener, ErrorListener errorListener) {
+    public DownloadRequest(String url, String savePath, long startPos, long endPos, long completeSize, int blockId, int blockCount, Listener<String> listener, ErrorListener errorListener) {
         this(Method.GET, url, listener, errorListener);
         mFilePath = savePath;
         mStartPos = startPos;
         mEndPos = endPos;
         mCompeleteSize = completeSize;
+        mBlockId = blockId;
+        mBlockCount = blockCount;
     }
 
     @Override
@@ -66,7 +69,12 @@ public class DownloadRequest extends Request<String>{
 
     @Override
     protected Response<String> parseNetworkResponse(NetworkResponse response) {
-        return null;
+        String filename = new String(response.data);
+        if (response.data.length > 0) {
+            return Response.success(filename, null);
+        } else {
+            return Response.error(new ParseError(response));
+        }
     }
 
     public boolean isSupportRange(final HttpResponse response) {
@@ -87,6 +95,7 @@ public class DownloadRequest extends Request<String>{
     public byte[] handleRawResponse(HttpResponse httpResponse) throws IOException, ServerError, CanceledError {
         int statusCode = httpResponse.getStatusLine().getStatusCode();
         if (statusCode < 300){
+            RandomAccessFile randomAccessFile = null;
             try {
                 randomAccessFile = new RandomAccessFile(mFilePath, "rwd");
                 randomAccessFile.seek(mStartPos + mEndPos);
@@ -97,6 +106,7 @@ public class DownloadRequest extends Request<String>{
                 if (isCanceled()) {
                     throw new CanceledError();
                 }
+                postProgress();
                 byte buffer[] = new byte[4 * 1024];
                 int length = 0;
                 while((length = inputStream.read(buffer, 0, buffer.length)) != -1) {
@@ -105,7 +115,10 @@ public class DownloadRequest extends Request<String>{
                     if (isCanceled()) {
                         throw new CanceledError();
                     }
+                    postProgress();
                 }
+                postProgress();
+                return mFilePath.getBytes();
             } catch (FileNotFoundException e){
                 VolleyLog.e("filepath not exit");
                 e.printStackTrace();
@@ -119,5 +132,12 @@ public class DownloadRequest extends Request<String>{
             throw new IOException();
         }
         return super.handleRawResponse(httpResponse);
+    }
+
+    /**
+     * 发送进度
+     */
+    private void postProgress(){
+        postProgress(Type.DOWNLOAD, mStartPos, mEndPos, mCompeleteSize, mBlockId, mBlockCount);
     }
 }

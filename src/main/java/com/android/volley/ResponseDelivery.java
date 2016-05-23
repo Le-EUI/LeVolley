@@ -32,4 +32,6 @@ public interface ResponseDelivery {
      * Posts an error for the given request.
      */
     public void postError(Request<?> request, VolleyError error);
+
+    public void postProgress(Request<?> request, Request.Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount);
 }
