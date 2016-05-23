@@ -17,12 +17,13 @@
 package toolbox;
 
 import android.text.TextUtils;
-import com.android.volley.VolleyError;
+import com.android.volley.RequestQueue;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
+import com.android.volley.VolleyError;
 import com.android.volley.VolleyLog;
 import com.android.volley.toolbox.HttpHeaderParser;
 
@@ -44,6 +45,7 @@ public class DownloadSizeRequest extends Request<Long> {
     private String mSavePath;//保存路径
     private String mFileName;//文件名
 
+    private RequestQueue mRequestQueue;
     /**
      * Creates a new request with the given method.
      *
@@ -66,8 +68,9 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadSizeRequest(String url, String savePath, String fileName, Listener<Long> listener, ErrorListener errorListener) {
+    public DownloadSizeRequest(RequestQueue queue, String url, String savePath, String fileName, Listener<Long> listener, ErrorListener errorListener) {
         this(Method.GET, url, listener, errorListener);
+        mRequestQueue = queue;
         mSavePath = savePath;
         mFileName = fileName;
     }
@@ -155,13 +158,14 @@ public class DownloadSizeRequest extends Request<Long> {
      */
     private void download(long startPos, long endPos, long completeSize, final int blockId, final int blockCount){
         final String filePath = mSavePath + File.separator + mFileName;
-        VolleyLog.d("filePath: " + filePath);
+        VolleyLog.d("download...filePath: " + filePath + ", startPos: " + startPos + ", endPos: " + endPos
+                + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
         DownloadRequest request = new DownloadRequest(
                 getUrl(), filePath, startPos, endPos, completeSize, blockId, blockCount,
                 new Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        VolleyLog.d("success: " + response + ", blockId: " + blockId + ", blockCount: " + blockCount);
+                        //VolleyLog.d("success: " + response);
                     }
                 },
                 new ErrorListener() {
@@ -178,5 +182,8 @@ public class DownloadSizeRequest extends Request<Long> {
                 + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
             }
         });
+        if (mRequestQueue != null){
+            mRequestQueue.add(request);
+        }
     }
 }
