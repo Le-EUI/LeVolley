@@ -80,7 +80,8 @@ public class DownloadSizeRequest extends Request<Long> {
     @Override
     protected Response<Long> parseNetworkResponse(NetworkResponse response) {
         long parsed = response.httpResponse.getEntity().getContentLength();
-        if (!TextUtils.isEmpty(mSavePath) && !TextUtils.isEmpty(mFileName)){
+        VolleyLog.d("fileSize: " + parsed);
+        if (parsed > 0 && !TextUtils.isEmpty(mSavePath) && !TextUtils.isEmpty(mFileName)){
             creatFile(parsed);
             handlerDownload(parsed);
         }
@@ -152,22 +153,30 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param blockId　下载块的id
      * @param blockCount 下载块的数量
      */
-    private void download(long startPos, long endPos, long completeSize, int blockId, int blockCount){
-        String filePath = mSavePath + File.separator + mFileName;
+    private void download(long startPos, long endPos, long completeSize, final int blockId, final int blockCount){
+        final String filePath = mSavePath + File.separator + mFileName;
         VolleyLog.d("filePath: " + filePath);
         DownloadRequest request = new DownloadRequest(
                 getUrl(), filePath, startPos, endPos, completeSize, blockId, blockCount,
                 new Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-
+                        VolleyLog.d("success: " + response + ", blockId: " + blockId + ", blockCount: " + blockCount);
                     }
                 },
                 new ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-
+                        VolleyLog.e("error:" + filePath + ", blockId: " + blockId + ", blockCount: " + blockCount);
+                        error.printStackTrace();
                     }
                 });
+        request.setLoadingListener(new Response.LoadingListener(){
+            @Override
+            public void onLoading(Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+                VolleyLog.d("type: " + type + ", startPos: " + startPos + ", endPos: " + endPos
+                + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
+            }
+        });
     }
 }

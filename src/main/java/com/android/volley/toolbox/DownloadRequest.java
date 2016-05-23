@@ -11,10 +11,9 @@ import com.android.volley.toolbox.HttpHeaderParser;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by dingding on 23/05/16.
@@ -61,6 +60,21 @@ public class DownloadRequest extends Request<String>{
     }
 
     @Override
+    public Map<String, String> getHeaders() throws AuthFailureError {
+        File downloadFile = new File(mFilePath);
+        long fileLen = 0;
+        if (downloadFile.isFile() && downloadFile.exists()) {
+            fileLen = downloadFile.length();
+        }
+        if (fileLen > 0) {
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put("Range", "bytes=" + mStartPos + mCompeleteSize + "-" + mEndPos);
+            return headers;
+        }
+        return super.getHeaders();
+    }
+
+    @Override
     protected void deliverResponse(String response) {
         if (mListener != null) {
             mListener.onResponse(response);
@@ -94,6 +108,7 @@ public class DownloadRequest extends Request<String>{
     @Override
     public byte[] handleRawResponse(HttpResponse httpResponse) throws IOException, ServerError, CanceledError {
         int statusCode = httpResponse.getStatusLine().getStatusCode();
+        VolleyLog.d("handleRawResponse...statusCode: " + statusCode);
         if (statusCode < 300){
             RandomAccessFile randomAccessFile = null;
             try {
@@ -106,8 +121,6 @@ public class DownloadRequest extends Request<String>{
                 if (isCanceled()) {
                     throw new CanceledError();
                 }
-                //跳过已经完成的
-                inputStream.skip(mCompeleteSize);
                 postProgress();
                 byte buffer[] = new byte[4 * 1024];
                 int length = 0;
