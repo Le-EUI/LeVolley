@@ -41,7 +41,8 @@ public class DownloadSizeRequest extends Request<Long> {
 
     private final Listener<Long> mListener;
 
-    private String mSavePath;
+    private String mSavePath;//保存路径
+    private String mFileName;//文件名
 
     /**
      * Creates a new request with the given method.
@@ -65,9 +66,10 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadSizeRequest(String url, String savePath, Listener<Long> listener, ErrorListener errorListener) {
+    public DownloadSizeRequest(String url, String savePath, String fileName, Listener<Long> listener, ErrorListener errorListener) {
         this(Method.GET, url, listener, errorListener);
         mSavePath = savePath;
+        mFileName = fileName;
     }
 
     @Override
@@ -78,9 +80,9 @@ public class DownloadSizeRequest extends Request<Long> {
     @Override
     protected Response<Long> parseNetworkResponse(NetworkResponse response) {
         long parsed = response.httpResponse.getEntity().getContentLength();
-        if (!TextUtils.isEmpty(mSavePath)){
-            //creatFile(parsed);
-            //handlerDownload(parsed);
+        if (!TextUtils.isEmpty(mSavePath) && !TextUtils.isEmpty(mFileName)){
+            creatFile(parsed);
+            handlerDownload(parsed);
         }
         return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response));
     }
@@ -90,13 +92,14 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param fileSize 文件大小
      */
     private void creatFile(long fileSize){
+        VolleyLog.d("savePath: " + mSavePath + ", fileName: " + mFileName);
         File dir = new File(mSavePath);
         if(!dir.exists()) {
             if(dir.mkdirs()) {
                 VolleyLog.d("mkdirs success.");
             }
         }
-        File file = new File(mSavePath, "fileName");
+        File file = new File(mSavePath, mFileName);
         RandomAccessFile randomFile= null;
         try {
             randomFile = new RandomAccessFile(file,"rwd");
@@ -150,8 +153,10 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param blockCount 下载块的数量
      */
     private void download(long startPos, long endPos, long completeSize, int blockId, int blockCount){
+        String filePath = mSavePath + File.separator + mFileName;
+        VolleyLog.d("filePath: " + filePath);
         DownloadRequest request = new DownloadRequest(
-                getUrl(), "", startPos, endPos, 0, blockId, blockCount,
+                getUrl(), filePath, startPos, endPos, completeSize, blockId, blockCount,
                 new Listener<String>() {
                     @Override
                     public void onResponse(String response) {
