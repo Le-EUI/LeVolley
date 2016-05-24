@@ -122,10 +122,10 @@ public class BasicNetwork implements Network {
                 }
 
                 // Some responses such as 204s do not have content.  We must check.
-                if (request.getType() != Request.Type.DOWNLOAD_SIZE && httpResponse.getEntity() != null) {
-                  responseContents = entityToBytes(httpResponse.getEntity());
-                } else if(request.getType() == Request.Type.DOWNLOAD){
+                if(request.getType() == Request.Type.DOWNLOAD){
                     responseContents = request.handleRawResponse(httpResponse);
+                } else if (request.getType() != Request.Type.DOWNLOAD_SIZE && httpResponse.getEntity() != null) {
+                    responseContents = entityToBytes(httpResponse.getEntity());
                 } else {
                   // Add 0 byte response as a way of honestly representing a
                   // no-content request.
