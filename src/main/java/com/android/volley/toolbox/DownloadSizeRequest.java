@@ -32,6 +32,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import main.java.com.android.volley.toolbox.DownloadTask;
+import main.java.com.android.volley.toolbox.ThreadManager;
+
 
 /**
  * A canned request for retrieving the response body at a given URL as a String.
@@ -82,6 +85,7 @@ public class DownloadSizeRequest extends Request<Long> {
 
     @Override
     protected Response<Long> parseNetworkResponse(NetworkResponse response) {
+        //获取文件长度
         long parsed = response.httpResponse.getEntity().getContentLength();
         VolleyLog.d("fileSize: " + parsed);
         if (parsed > 0 && !TextUtils.isEmpty(mSavePath) && !TextUtils.isEmpty(mFileName)){
@@ -139,12 +143,17 @@ public class DownloadSizeRequest extends Request<Long> {
                     } else {
                         endPos = startPos + BLOCK_SIZE;
                     }
-                    download(startPos, endPos, 0, i, blockCount);
+                    DownloadTask downloadTask = new DownloadTask(startPos, endPos, 0, i, blockCount, mSavePath, mFileName, mRequestQueue);
+                    ThreadManager threadManager = new ThreadManager(blockCount);
+                    threadManager.getDownloadPool().execute(downloadTask);
+                    //download(startPos, endPos, 0, i, blockCount);
                 }
             }
         } else {
             //只启动一个线程下载
-            download(0, size, 0, 0, 1);
+            DownloadTask downloadTask = new DownloadTask(0, size, 0, 0, 1, mSavePath, mFileName, mRequestQueue);
+            ThreadManager.getSinglePool().execute(downloadTask);
+            //download(0, size, 0, 0, 1);
         }
     }
 
@@ -156,34 +165,34 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param blockId　下载块的id
      * @param blockCount 下载块的数量
      */
-    private void download(long startPos, long endPos, long completeSize, final int blockId, final int blockCount){
-        final String filePath = mSavePath + File.separator + mFileName;
-        VolleyLog.d("download...filePath: " + filePath + ", startPos: " + startPos + ", endPos: " + endPos
-                + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
-        DownloadRequest request = new DownloadRequest(
-                getUrl(), filePath, startPos, endPos, completeSize, blockId, blockCount,
-                new Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        //VolleyLog.d("success: " + response);
-                    }
-                },
-                new ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        VolleyLog.e("error:" + filePath + ", blockId: " + blockId + ", blockCount: " + blockCount);
-                        error.printStackTrace();
-                    }
-                });
-        request.setLoadingListener(new Response.LoadingListener(){
-            @Override
-            public void onLoading(Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
-                VolleyLog.d("type: " + type + ", startPos: " + startPos + ", endPos: " + endPos
-                + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
-            }
-        });
-        if (mRequestQueue != null){
-            mRequestQueue.add(request);
-        }
-    }
+//    private void download(long startPos, long endPos, long completeSize, final int blockId, final int blockCount){
+//        final String filePath = mSavePath + File.separator + mFileName;
+//        VolleyLog.d("download...filePath: " + filePath + ", startPos: " + startPos + ", endPos: " + endPos
+//                + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
+//        DownloadRequest request = new DownloadRequest(
+//                getUrl(), filePath, startPos, endPos, completeSize, blockId, blockCount,
+//                new Listener<String>() {
+//                    @Override
+//                    public void onResponse(String response) {
+//                        //VolleyLog.d("success: " + response);
+//                    }
+//                },
+//                new ErrorListener() {
+//                    @Override
+//                    public void onErrorResponse(VolleyError error) {
+//                        VolleyLog.e("error:" + filePath + ", blockId: " + blockId + ", blockCount: " + blockCount);
+//                        error.printStackTrace();
+//                    }
+//                });
+//        request.setLoadingListener(new Response.LoadingListener(){
+//            @Override
+//            public void onLoading(Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+//                VolleyLog.d("type: " + type + ", startPos: " + startPos + ", endPos: " + endPos
+//                + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
+//            }
+//        });
+//        if (mRequestQueue != null){
+//            mRequestQueue.add(request);
+//        }
+//    }
 }
