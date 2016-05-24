@@ -66,9 +66,12 @@ public class DownloadRequest extends Request<String>{
         if (downloadFile.isFile() && downloadFile.exists()) {
             fileLen = downloadFile.length();
         }
+        VolleyLog.d("getHeaders...fileLen: " + fileLen + ", mStartPos: " + mStartPos
+                + ", mCompeleteSize: " + mCompeleteSize + ", mEndPos: " + mEndPos);
         if (fileLen > 0) {
             Map<String, String> headers = new HashMap<String, String>();
-            headers.put("Range", "bytes=" + mStartPos + mCompeleteSize + "-" + mEndPos);
+            headers.put("Range", "bytes=" + String.valueOf(mStartPos + mCompeleteSize) + "-" + String.valueOf(mEndPos));
+            VolleyLog.d("getHeaders...heads: " + headers.entrySet().toString());
             return headers;
         }
         return super.getHeaders();
