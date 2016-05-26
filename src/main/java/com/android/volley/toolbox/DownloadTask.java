@@ -52,7 +52,7 @@ public class DownloadTask implements Runnable {
     private void download(long startPos, long endPos, long completeSize,
                           final int blockId, final int blockCount, String mSavePath,
                           String mFileName, RequestQueue mRequestQueue){
-        final String filePath = mSavePath + File.separator + mFileName;
+        /*final String filePath = mSavePath + File.separator + mFileName;
         VolleyLog.d("download...filePath: " + filePath + ", startPos: " + startPos + ", endPos: " + endPos
                 + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
         toolbox.DownloadRequest request = new toolbox.DownloadRequest(
@@ -79,7 +79,7 @@ public class DownloadTask implements Runnable {
         });
         if (mRequestQueue != null){
             mRequestQueue.add(request);
-        }
+        }*/
     }
 
     @Override
