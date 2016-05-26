@@ -57,11 +57,14 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadSizeRequest(int method, String url, Listener<Long> listener,
+    public DownloadSizeRequest(int method, RequestQueue queue, String url, String savePath, String fileName, Listener<Long> listener,
                                ErrorListener errorListener) {
         super(method, url, errorListener);
         mListener = listener;
         mType = Type.DOWNLOAD_SIZE;
+        mRequestQueue = queue;
+        mSavePath = savePath;
+        mFileName = fileName;
     }
 
     /**
@@ -72,10 +75,7 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param errorListener Error listener, or null to ignore errors
      */
     public DownloadSizeRequest(RequestQueue queue, String url, String savePath, String fileName, Listener<Long> listener, ErrorListener errorListener) {
-        this(Method.GET, url, listener, errorListener);
-        mRequestQueue = queue;
-        mSavePath = savePath;
-        mFileName = fileName;
+        this(Method.GET, queue, url, savePath, fileName, listener, errorListener);
     }
 
     @Override
