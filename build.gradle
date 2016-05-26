@@ -36,3 +36,13 @@ android {
 
 apply from: 'rules.gradle'
 apply from: 'bintray.gradle'
+
+task makeJar(type: Copy){
+    delete 'build/libs/mysdk.jar'
+    from('build/intermediates/bundles/release/')
+    into('build/libs/')
+    include('classes.jar')
+    rename('classes.jar', 'mysdk.jar')
+}
+
+makeJar.dependsOn(build)
