@@ -35,11 +35,16 @@ public class DownloadRequest extends Request<String>{
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadRequest(int method, String url, Listener<String> listener,
-                               ErrorListener errorListener) {
+    public DownloadRequest(int method, String url, String savePath, long startPos, long endPos, long completeSize, int blockId, int blockCount,
+                           Listener<String> listener, ErrorListener errorListener) {
         super(method, url, errorListener);
         mListener = listener;
-        mType = Type.DOWNLOAD;
+        mFilePath = savePath;
+        mStartPos = startPos;
+        mEndPos = endPos;
+        mCompeleteSize = completeSize;
+        mBlockId = blockId;
+        mBlockCount = blockCount;
     }
 
     /**
@@ -50,13 +55,12 @@ public class DownloadRequest extends Request<String>{
      * @param errorListener Error listener, or null to ignore errors
      */
     public DownloadRequest(String url, String savePath, long startPos, long endPos, long completeSize, int blockId, int blockCount, Listener<String> listener, ErrorListener errorListener) {
-        this(Method.GET, url, listener, errorListener);
-        mFilePath = savePath;
-        mStartPos = startPos;
-        mEndPos = endPos;
-        mCompeleteSize = completeSize;
-        mBlockId = blockId;
-        mBlockCount = blockCount;
+        this(Method.GET, url, savePath, startPos, endPos, completeSize, blockId, blockCount, listener, errorListener);
+    }
+
+    @Override
+    public Type getType() {
+        return Type.DOWNLOAD;
     }
 
     @Override

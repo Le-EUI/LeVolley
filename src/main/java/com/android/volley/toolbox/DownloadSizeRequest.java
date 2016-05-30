@@ -58,7 +58,6 @@ public class DownloadSizeRequest extends Request<Long> {
                                ErrorListener errorListener) {
         super(method, url, errorListener);
         mListener = listener;
-        mType = Type.DOWNLOAD_SIZE;
         mRequestQueue = queue;
         mSavePath = savePath;
         mFileName = fileName;
@@ -73,6 +72,11 @@ public class DownloadSizeRequest extends Request<Long> {
      */
     public DownloadSizeRequest(RequestQueue queue, String url, String savePath, String fileName, Listener<Long> listener, ErrorListener errorListener) {
         this(Method.GET, queue, url, savePath, fileName, listener, errorListener);
+    }
+
+    @Override
+    public Type getType() {
+        return Type.DOWNLOAD_SIZE;
     }
 
     @Override

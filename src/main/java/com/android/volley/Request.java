@@ -74,10 +74,6 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     private final int mMethod;
 
-    /**
-     * request的类型
-     */
-    protected Type mType = Type.DEFAULT;
     /** URL of this request. */
     private final String mUrl;
 
@@ -101,6 +97,9 @@ public abstract class Request<T> implements Comparable<Request<T>> {
 
     /** Whether or not this request has been canceled. */
     private boolean mCanceled = false;
+
+    /** Whether or not this request has been paused.  */
+    private boolean mPaused = false;
 
     /** Whether or not a response has been delivered for this request yet. */
     private boolean mResponseDelivered = false;
@@ -157,8 +156,11 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         return mMethod;
     }
 
+    /**
+     * Return the {@link Type} for this request. {@link Type#DEFAULT} by default.
+     */
     public Type getType(){
-        return mType;
+        return Type.DEFAULT;
     }
 
     /**
@@ -345,6 +347,20 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     public boolean isCanceled() {
         return mCanceled;
+    }
+
+    /**
+     * Mark this request as paused.
+     */
+    public void pause(){
+        mPaused = true;
+    }
+
+    /**
+     * Returns true if this request has been paused.
+     */
+    public boolean isPaused(){
+        return mPaused;
     }
 
     /**

@@ -56,8 +56,9 @@ public class DownloadTable {
         int FAIL = 0;/**失败*/
         int SUCCESS = 1;/**成功*/
         int PAUSE = 2;/**暂停*/
-        int INIT = 3;/**还没开始下载*/
+        int INIT = 3;/**默认初始化状态*/
         int LOADING = 4;/**正在下载*/
         int CANCEL = 5;/**取消*/
+        int WAITING = 6;/**等待中，已经加入下载队列*/
     }
 }
