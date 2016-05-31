@@ -55,7 +55,7 @@ public class DownloadProvider extends ContentProvider{
         mDownloadProjectionMap = new HashMap<String, String>();
         mDownloadProjectionMap.put(DownloadTable.DownloadInfo._ID, DownloadTable.DownloadInfo._ID);
         mDownloadProjectionMap.put(DownloadTable.DownloadInfo.URL, DownloadTable.DownloadInfo.URL);
-        mDownloadProjectionMap.put(DownloadTable.DownloadInfo.FILE_NAME, DownloadTable.DownloadInfo.FILE_NAME);
+        mDownloadProjectionMap.put(DownloadTable.DownloadInfo.FILE_PATH, DownloadTable.DownloadInfo.FILE_PATH);
         mDownloadProjectionMap.put(DownloadTable.DownloadInfo.FILE_SIZE, DownloadTable.DownloadInfo.FILE_SIZE);
         mDownloadProjectionMap.put(DownloadTable.DownloadInfo.START_POS, DownloadTable.DownloadInfo.START_POS);
         mDownloadProjectionMap.put(DownloadTable.DownloadInfo.END_POS, DownloadTable.DownloadInfo.END_POS);

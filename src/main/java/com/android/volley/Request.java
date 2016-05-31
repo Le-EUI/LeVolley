@@ -16,6 +16,7 @@
 
 package com.android.volley;
 
+import android.content.Context;
 import android.net.TrafficStats;
 import android.net.Uri;
 import android.os.Handler;
@@ -43,6 +44,7 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     private static final String DEFAULT_PARAMS_ENCODING = "UTF-8";
 
+    protected Context mContext;
     /**
      * Supported request methods.
      */
@@ -149,6 +151,10 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         mDefaultTrafficStatsTag = findDefaultTrafficStatsTag(url);
     }
 
+    /** attach context*/
+    protected void attach(Context context){
+        mContext = context;
+    }
     /**
      * Return the method for this request.  Can be one of the values in {@link Method}.
      */
@@ -361,6 +367,13 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     public boolean isPaused(){
         return mPaused;
+    }
+
+    /**
+     * is support breakpoint
+     */
+    protected boolean isSupportBreakpoint(){
+        return mContext != null;
     }
 
     /**
@@ -661,6 +674,7 @@ public abstract class Request<T> implements Comparable<Request<T>> {
             mResponseDelivery.postProgress(this, type, startPos, endPos, completeSize, blockId, blockCount);
         }
     }
+
     /**
      * Our comparator sorts from high to low priority, and secondarily by
      * sequence number to provide FIFO ordering.

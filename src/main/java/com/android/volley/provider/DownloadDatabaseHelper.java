@@ -76,7 +76,7 @@ public class DownloadDatabaseHelper extends SQLiteOpenHelper{
         db.execSQL("CREATE TABLE IF NOT EXISTS " + DownloadTable.DownloadInfo.TABLE + " (" +
                 DownloadTable.DownloadInfo._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
                 DownloadTable.DownloadInfo.URL + " TEXT," +
-                DownloadTable.DownloadInfo.FILE_NAME + " TEXT," +
+                DownloadTable.DownloadInfo.FILE_PATH + " TEXT," +
                 DownloadTable.DownloadInfo.FILE_SIZE + " TEXT," +
                 DownloadTable.DownloadInfo.START_POS + " TEXT," +
                 DownloadTable.DownloadInfo.END_POS + " TEXT," +

@@ -148,12 +148,12 @@ public class DownloadSizeRequest extends Request<Long> {
                         endPos = startPos + BLOCK_SIZE;
                     }
 
-                    download(startPos, endPos, 0, i, blockCount);
+                    download(size, startPos, endPos, 0, i, blockCount);
                 }
             }
         } else {
             //只启动一个线程下载
-            download(0, size, 0, 0, 1);
+            download(size, 0, size, 0, 0, 1);
         }
     }
 
@@ -165,12 +165,12 @@ public class DownloadSizeRequest extends Request<Long> {
      * @param blockId　下载块的id
      * @param blockCount 下载块的数量
      */
-    private void download(long startPos, long endPos, long completeSize, final int blockId, final int blockCount){
+    private void download(long fileSize, long startPos, long endPos, long completeSize, final int blockId, final int blockCount){
         final String filePath = mSavePath + File.separator + mFileName;
         VolleyLog.d("download...filePath: " + filePath + ", startPos: " + startPos + ", endPos: " + endPos
                 + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
         toolbox.DownloadRequest request = new toolbox.DownloadRequest(
-                getUrl(), filePath, startPos, endPos, completeSize, blockId, blockCount,
+                getUrl(), filePath, fileSize, startPos, endPos, completeSize, blockId, blockCount,
                 new Listener<String>() {
                     @Override
                     public void onResponse(String response) {

@@ -3,20 +3,28 @@ package provider;
 /**
  * Created by dingding on 30/05/16.
  */
-public class DownloadInfo implements Comparable<DownloadInfo>{
+public class DownloadInfo{
     private String url;
-    private String file_name;
-    private long file_size;
-    private long start_pos;
-    private long end_pos;
-    private long complete_size;
-    private int block_id;
-    private int block_count;
+    private String filePath;
+    private long fileSize;
+    private long startPos;
+    private long endPos;
+    private long completeSize;
+    private int blockId;
+    private int blockCount;
     private int state;
 
-    @Override
-    public int compareTo(DownloadInfo another) {
-        return 0    ;
+    public DownloadInfo(String url, String filePath, long fileSize, long startPos, long endPos, long completeSize,
+                        int blockId, int blockCount, int state){
+        this.url = url;
+        this.filePath = filePath;
+        this.fileSize = fileSize;
+        this.startPos = startPos;
+        this.endPos = endPos;
+        this.completeSize = completeSize;
+        this.blockId = blockId;
+        this.blockCount = blockCount;
+        this.state = state;
     }
 
     public String getUrl() {
@@ -27,60 +35,61 @@ public class DownloadInfo implements Comparable<DownloadInfo>{
         this.url = url;
     }
 
-    public String getFile_name() {
-        return file_name;
+
+    public String getFilePath() {
+        return filePath;
     }
 
-    public void setFile_name(String file_name) {
-        this.file_name = file_name;
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 
-    public long getFile_size() {
-        return file_size;
+    public long getFileSize() {
+        return fileSize;
     }
 
-    public void setFile_size(long file_size) {
-        this.file_size = file_size;
+    public void setFileSize(long fileSize) {
+        this.fileSize = fileSize;
     }
 
-    public long getStart_pos() {
-        return start_pos;
+    public long getStartPos() {
+        return startPos;
     }
 
-    public void setStart_pos(long start_pos) {
-        this.start_pos = start_pos;
+    public void setStartPos(long startPos) {
+        this.startPos = startPos;
     }
 
-    public long getEnd_pos() {
-        return end_pos;
+    public long getEndPos() {
+        return endPos;
     }
 
-    public void setEnd_pos(long end_pos) {
-        this.end_pos = end_pos;
+    public void setEndPos(long endPos) {
+        this.endPos = endPos;
     }
 
-    public long getComplete_size() {
-        return complete_size;
+    public long getCompleteSize() {
+        return completeSize;
     }
 
-    public void setComplete_size(long complete_size) {
-        this.complete_size = complete_size;
+    public void setCompleteSize(long completeSize) {
+        this.completeSize = completeSize;
     }
 
-    public int getBlock_id() {
-        return block_id;
+    public int getBlockId() {
+        return blockId;
     }
 
-    public void setBlock_id(int block_id) {
-        this.block_id = block_id;
+    public void setBlockId(int blockId) {
+        this.blockId = blockId;
     }
 
-    public int getBlock_count() {
-        return block_count;
+    public int getBlockCount() {
+        return blockCount;
     }
 
-    public void setBlock_count(int block_count) {
-        this.block_count = block_count;
+    public void setBlockCount(int blockCount) {
+        this.blockCount = blockCount;
     }
 
     public int getState() {

@@ -17,7 +17,7 @@ public class DownloadTable {
         /**
          * 下载的文件名
          */
-        String FILE_NAME = "file_name";
+        String FILE_PATH = "file_path";
 
         /**
          * 下载的文件大小

@@ -10,6 +10,9 @@ import com.android.volley.VolleyLog;
 import com.android.volley.toolbox.HttpHeaderParser;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import provider.DownloadInfo;
+import provider.DownloadProviderTracker;
+import provider.DownloadTable;
 
 import java.io.*;
 import java.util.HashMap;
@@ -19,8 +22,11 @@ import java.util.Map;
  * Created by dingding on 23/05/16.
  */
 public class DownloadRequest extends Request<String>{
+    private static final String TAG = "DownloadRequest";
+
     private final Listener<String> mListener;
     private String mFilePath;
+    private long mFileSize;
     private long mStartPos;
     private long mEndPos;
     private long mCompeleteSize;
@@ -35,16 +41,18 @@ public class DownloadRequest extends Request<String>{
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadRequest(int method, String url, String savePath, long startPos, long endPos, long completeSize, int blockId, int blockCount,
+    public DownloadRequest(int method, String url, String filePath, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount,
                            Listener<String> listener, ErrorListener errorListener) {
         super(method, url, errorListener);
         mListener = listener;
-        mFilePath = savePath;
+        mFilePath = filePath;
+        mFileSize = fileSize;
         mStartPos = startPos;
         mEndPos = endPos;
         mCompeleteSize = completeSize;
         mBlockId = blockId;
         mBlockCount = blockCount;
+
     }
 
     /**
@@ -54,8 +62,8 @@ public class DownloadRequest extends Request<String>{
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadRequest(String url, String savePath, long startPos, long endPos, long completeSize, int blockId, int blockCount, Listener<String> listener, ErrorListener errorListener) {
-        this(Method.GET, url, savePath, startPos, endPos, completeSize, blockId, blockCount, listener, errorListener);
+    public DownloadRequest(String url, String filePath, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount, Listener<String> listener, ErrorListener errorListener) {
+        this(Method.GET, url, filePath, fileSize, startPos, endPos, completeSize, blockId, blockCount, listener, errorListener);
     }
 
     @Override
@@ -161,5 +169,17 @@ public class DownloadRequest extends Request<String>{
      */
     private void postProgress(){
         postProgress(Type.DOWNLOAD, mStartPos, mEndPos, mCompeleteSize, mBlockId, mBlockCount);
+    }
+
+    private void insertDownloadInfo(){
+        if (!isSupportBreakpoint()){
+            VolleyLog.e(TAG, "not support breakpoint");
+        }
+        DownloadInfo downloadInfo = new DownloadInfo(getUrl(), mFilePath, mFileSize, mStartPos, mEndPos, mCompeleteSize,
+                mBlockId, mBlockCount, DownloadTable.DownloadInfo.WAITING);
+        if (DownloadProviderTracker.isDownloadInfoExist(mContext, downloadInfo)){
+
+        }
+        DownloadProviderTracker.insertDownloadInfo(mContext, downloadInfo);
     }
 }
