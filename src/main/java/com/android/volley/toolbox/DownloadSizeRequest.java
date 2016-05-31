@@ -186,7 +186,7 @@ public class DownloadSizeRequest extends Request<Long> {
                 });
         request.setLoadingListener(new Response.LoadingListener(){
             @Override
-            public void onLoading(Request.Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+            public void onLoading(Request.Type type, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
                 VolleyLog.d("type: " + type + ", startPos: " + startPos + ", endPos: " + endPos
                 + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
             }

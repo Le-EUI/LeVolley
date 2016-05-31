@@ -1,5 +1,6 @@
 package toolbox;
 
+import android.database.Cursor;
 import com.android.volley.*;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
@@ -33,6 +34,8 @@ public class DownloadRequest extends Request<String>{
     private int mBlockId;
     private int mBlockCount;
 
+    private DownloadInfo mDownloadInfo;
+
     /**
      * Creates a new request with the given method.
      *
@@ -52,7 +55,10 @@ public class DownloadRequest extends Request<String>{
         mCompeleteSize = completeSize;
         mBlockId = blockId;
         mBlockCount = blockCount;
+        mDownloadInfo = new DownloadInfo(url, mFilePath, mFileSize, mStartPos, mEndPos, mCompeleteSize,
+                mBlockId, mBlockCount, State.WAITING.code);
 
+        checkDownloadInfo();
     }
 
     /**
@@ -136,6 +142,7 @@ public class DownloadRequest extends Request<String>{
                 if (isCanceled()) {
                     throw new CanceledError();
                 }
+                updateState(State.LOADING.code);
                 postProgress();
                 byte buffer[] = new byte[4 * 1024];
                 int length = 0;
@@ -164,22 +171,102 @@ public class DownloadRequest extends Request<String>{
         return super.handleRawResponse(httpResponse);
     }
 
+    @Override
+    public boolean isCanceled() {
+        boolean isCanceled = super.isCanceled();
+        if (isCanceled){
+            updateState(State.CANCEL.code);
+        }
+        return isCanceled;
+    }
+
+    @Override
+    public boolean isPaused() {
+        boolean isPaused =  super.isPaused();
+        if (isPaused){
+            updateState(State.PAUSE.code);
+        }
+        return isPaused;
+    }
+
     /**
      * 发送进度
      */
     private void postProgress(){
-        postProgress(Type.DOWNLOAD, mStartPos, mEndPos, mCompeleteSize, mBlockId, mBlockCount);
+        postProgress(Type.DOWNLOAD, mFileSize, mStartPos, mEndPos, mCompeleteSize, mBlockId, mBlockCount);
     }
 
-    private void insertDownloadInfo(){
+    /**
+     * 检测该DownloadInfo
+     */
+    private void checkDownloadInfo(){
         if (!isSupportBreakpoint()){
             VolleyLog.e(TAG, "not support breakpoint");
         }
-        DownloadInfo downloadInfo = new DownloadInfo(getUrl(), mFilePath, mFileSize, mStartPos, mEndPos, mCompeleteSize,
-                mBlockId, mBlockCount, DownloadTable.DownloadInfo.WAITING);
-        if (DownloadProviderTracker.isDownloadInfoExist(mContext, downloadInfo)){
+        /**检测文件存不存在*/
 
+        /**检测数据库存不存在该DownloadInfo*/
+        if (isDownloadInfoExist()){
+            updateState(State.WAITING.code);
+        } else {
+            DownloadProviderTracker.insertDownloadInfo(mContext, mDownloadInfo);
         }
-        DownloadProviderTracker.insertDownloadInfo(mContext, downloadInfo);
+    }
+
+    /**
+     * 该downloadInfo是否存在
+     * 注：如果存在的话重新赋值mCompleteSize
+     * @return
+     */
+    private boolean isDownloadInfoExist(){
+        Cursor cursor = null;
+        try {
+            cursor = DownloadProviderTracker.queryDownloadInfo(mContext, mDownloadInfo);
+            if (cursor != null && cursor.moveToFirst()){
+                String complete = cursor.getString(cursor.getColumnIndex(DownloadTable.DownloadInfo.COMPLETE_SIZE));
+                mCompeleteSize = Long.valueOf(complete);
+                return true;
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        } finally {
+            if (cursor != null){
+                cursor.close();
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 更新下载状态
+     * @param state
+     */
+    private void updateState(int state){
+        DownloadProviderTracker.updateDownloadState(mContext, mDownloadInfo, state);
+    }
+
+    /**
+     * 更新下载进度
+     */
+    private void updateProgress(){
+        DownloadProviderTracker.updateDownloadProgress(mContext, mDownloadInfo, mCompeleteSize);
+    }
+    /**
+     * download state
+     */
+    public enum State{
+        INIT(DownloadTable.DownloadInfo.INIT),
+        WAITING(DownloadTable.DownloadInfo.WAITING),
+        LOADING(DownloadTable.DownloadInfo.LOADING),
+        CANCEL(DownloadTable.DownloadInfo.CANCEL),
+        PAUSE(DownloadTable.DownloadInfo.PAUSE),
+        SUCCESS(DownloadTable.DownloadInfo.SUCCESS),
+        FAIL(DownloadTable.DownloadInfo.FAIL);
+
+        public int code;
+
+        State(int code){
+            this.code = code;
+        }
     }
 }

@@ -69,24 +69,44 @@ public class ExecutorDelivery implements ResponseDelivery {
         mResponsePoster.execute(new ResponseDeliveryRunnable(request, response, null));
     }
 
+    /**
+     * 发送具体的下载进度,给自己使用
+     * @param request
+     * @param type
+     * @param fileSize
+     * @param startPos
+     * @param endPos
+     * @param completeSize
+     * @param blockId
+     * @param blockCount
+     */
     @Override
-    public void postProgress(Request<?> request, Request.Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+    public void postProgress(Request<?> request, Request.Type type, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
         request.addMarker("post-progress");
-        mResponsePoster.execute(new ProgressDeliveryRunnable(request, type, startPos, endPos, completeSize, blockId, blockCount));
+        mResponsePoster.execute(new ProgressDeliveryRunnable(request, type, fileSize, startPos, endPos, completeSize, blockId, blockCount));
+    }
+
+    @Override
+    public void postProgress(Request<?> request, Request.Type type, long completeSize, int progress){
+        request.addMarker("post-progress");
+        mResponsePoster.execute(new ProgressDeliveryRunnable(request, type, completeSize, progress));
     }
 
     private class ProgressDeliveryRunnable implements Runnable {
         private Request<?> mRequest;
         private Request.Type type;
+        private long fileSize;
         private long startPos;
         private long endPos;
         private long completeSize;
         private int blockId;
         private int blockCount;
+        private int progress;
 
-        public ProgressDeliveryRunnable(Request<?> request, Request.Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+        public ProgressDeliveryRunnable(Request<?> request, Request.Type type, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
             mRequest = request;
             this.type = type;
+            this.fileSize = fileSize;
             this.startPos = startPos;
             this.endPos = endPos;
             this.completeSize = completeSize;
@@ -94,12 +114,23 @@ public class ExecutorDelivery implements ResponseDelivery {
             this.blockCount = blockCount;
         }
 
+        public ProgressDeliveryRunnable(Request<?> request, Request.Type type, long completeSize, int progress){
+            mRequest = request;
+            this.type = type;
+            this.completeSize = completeSize;
+            this.progress = progress;
+        }
+
         @Override
         public void run() {
             if (mRequest.isCanceled()) {
                 return;
             }
-            mRequest.deliverProgress(type, startPos, endPos, completeSize, blockId, blockCount);
+            if (type == Request.Type.DOWNLOAD){
+                mRequest.deliverProgress(type, fileSize, startPos, endPos, completeSize, blockId, blockCount);
+            } else if (type == Request.Type.DOWNLOAD_SIZE){
+                mRequest.deliverProgress(completeSize, progress);
+            }
         }
     }
 

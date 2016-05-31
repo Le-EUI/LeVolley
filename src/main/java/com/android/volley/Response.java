@@ -45,13 +45,21 @@ public class Response<T> {
         /**
          *
          * @param type 加载类型　{@link Request.Type}
+         * @param fileSize
          * @param startPos 起始位置
          * @param endPos　结束位置
          * @param completeSize　完成的大小
          * @param blockId　划分块所在号
          * @param blockCount　划分块总数
          */
-        public void onLoading(Request.Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount);
+        void onLoading(Request.Type type, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount);
+    }
+
+    /** progress listener */
+    public interface ProgressListener{
+        void onStart(long fileSize);
+        void onProgress(long completeSize, int progress);
+        void onEnd();
     }
 
     /** Returns a successful response containing the parsed result. */

@@ -88,6 +88,9 @@ public abstract class Request<T> implements Comparable<Request<T>> {
     /** Listener interface for loading. */
     private Response.LoadingListener mLoadingListener;
 
+    /** Listener interface for progress */
+    private Response.ProgressListener mProgressListener;
+
     /** Sequence number of this request, used to enforce FIFO ordering. */
     private Integer mSequence;
 
@@ -190,6 +193,11 @@ public abstract class Request<T> implements Comparable<Request<T>> {
 
     public Request<?> setLoadingListener(Response.LoadingListener loadingListener){
         mLoadingListener = loadingListener;
+        return this;
+    }
+
+    public Request<?> setProgressListener(Response.ProgressListener progressListener){
+        mProgressListener = progressListener;
         return this;
     }
 
@@ -654,9 +662,9 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         }
     }
 
-    protected void deliverProgress(Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+    protected void deliverProgress(Type type, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
         if(mLoadingListener != null){
-            mLoadingListener.onLoading(type, startPos, endPos, completeSize, blockId, blockCount);
+            mLoadingListener.onLoading(type, fileSize, startPos, endPos, completeSize, blockId, blockCount);
         }
     }
 
@@ -669,9 +677,26 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      * @param blockId
      * @param blockCount
      */
-    public void postProgress(Type type, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+    public void postProgress(Type type, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
         if (mLoadingListener != null && mResponseDelivery != null) {
-            mResponseDelivery.postProgress(this, type, startPos, endPos, completeSize, blockId, blockCount);
+            mResponseDelivery.postProgress(this, type, fileSize, startPos, endPos, completeSize, blockId, blockCount);
+        }
+    }
+
+    protected void deliverProgress(long completeSize, int progress){
+        if (mProgressListener != null){
+            mProgressListener.onProgress(completeSize, progress);
+        }
+    }
+
+    /**
+     * 发送暴露给用户的进度
+     * @param completeSize
+     * @param progress
+     */
+    public void postProgress(Type type, long completeSize, int progress){
+        if (mLoadingListener != null && mResponseDelivery != null){
+            mResponseDelivery.postProgress(this, type, completeSize, progress);
         }
     }
 
