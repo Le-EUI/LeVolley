@@ -695,7 +695,7 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      * @param progress
      */
     public void postProgress(Type type, long completeSize, int progress){
-        if (mLoadingListener != null && mResponseDelivery != null){
+        if (mProgressListener != null && mResponseDelivery != null){
             mResponseDelivery.postProgress(this, type, completeSize, progress);
         }
     }

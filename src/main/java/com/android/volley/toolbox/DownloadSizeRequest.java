@@ -16,6 +16,9 @@
 
 package toolbox;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.text.TextUtils;
 import com.android.volley.RequestQueue;
 import com.android.volley.NetworkResponse;
@@ -40,12 +43,34 @@ public class DownloadSizeRequest extends Request<Long> {
     /**下载文件划分块的大小*/
     private static final long BLOCK_SIZE = 2 * 1024 * 1024;
 
+    private static final int MSG_POST_PROGRESS = 1000;
+
     private final Listener<Long> mListener;
 
     private String mSavePath;//保存路径
     private String mFileName;//文件名
 
     private RequestQueue mRequestQueue;
+
+    /** 块下载完成大小数组, 代表每一个块下载完成的大小　*/
+    private long[] mCompleteSize;
+
+    /** 上一次下载的进度 */
+    private int mProgress;
+
+    /**
+     * 主线程handler, 用来对所有块发送来的进度进行统计
+     */
+    Handler mHandler = new Handler(Looper.getMainLooper()){
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what){
+                case MSG_POST_PROGRESS:
+                    handlerProgress(msg);
+                    break;
+            }
+        }
+    };
     /**
      * Creates a new request with the given method.
      *
@@ -137,6 +162,7 @@ public class DownloadSizeRequest extends Request<Long> {
         VolleyLog.d("download size: " + size);
         if (size > BLOCK_SIZE){
             int blockCount = (int) (size / BLOCK_SIZE) + 1;
+            mCompleteSize = new long[blockCount];
             if (blockCount > 1){
                 long startPos = 0;
                 long endPos = -1;
@@ -153,6 +179,7 @@ public class DownloadSizeRequest extends Request<Long> {
             }
         } else {
             //只启动一个线程下载
+            mCompleteSize = new long[1];
             download(size, 0, size, 0, 0, 1);
         }
     }
@@ -189,10 +216,49 @@ public class DownloadSizeRequest extends Request<Long> {
             public void onLoading(Request.Type type, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
                 VolleyLog.d("type: " + type + ", startPos: " + startPos + ", endPos: " + endPos
                 + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
+                postProgressToHandler(fileSize, completeSize, blockId);
             }
         });
         if (mRequestQueue != null){
             mRequestQueue.add(request);
+        }
+    }
+
+    /**
+     * 将每个块的进度发送到handler顺序统计进度
+     * @param fileSize
+     * @param completeSize
+     * @param blockId
+     */
+    private void postProgressToHandler(long fileSize, long completeSize, int blockId){
+        Object[] obj = new Object[3];
+        obj[0] = fileSize;
+        obj[1] = completeSize;
+        obj[2] = blockId;
+        Message msg = mHandler.obtainMessage(MSG_POST_PROGRESS, obj);
+        msg.sendToTarget();
+    }
+
+    /**
+     * 对块传来的进度进行重新计算
+     * @param msg
+     */
+    private void handlerProgress(Message msg){
+        Object[] obj = (Object[]) msg.obj;
+        long fileSize = (Long) obj[0];
+        long completeSize = (Long) obj[1];
+        int blockId = (Integer) obj[2];
+        mCompleteSize[blockId] = completeSize;
+
+        long totalCompleteSize = 0;
+        for (long complete : mCompleteSize){
+            totalCompleteSize += complete;
+        }
+
+        int progress = (int) (100 * totalCompleteSize / fileSize);
+        if (progress - mProgress >= 1){
+            postProgress(getType(), totalCompleteSize, progress);
+            mProgress = progress;
         }
     }
 }

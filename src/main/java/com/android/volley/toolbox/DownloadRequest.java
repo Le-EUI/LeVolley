@@ -202,6 +202,7 @@ public class DownloadRequest extends Request<String>{
     private void checkDownloadInfo(){
         if (!isSupportBreakpoint()){
             VolleyLog.e(TAG, "not support breakpoint");
+            return;
         }
         /**检测文件存不存在*/
 
@@ -242,6 +243,9 @@ public class DownloadRequest extends Request<String>{
      * @param state
      */
     private void updateState(int state){
+        if (!isSupportBreakpoint()){
+            return;
+        }
         DownloadProviderTracker.updateDownloadState(mContext, mDownloadInfo, state);
     }
 
@@ -249,6 +253,9 @@ public class DownloadRequest extends Request<String>{
      * 更新下载进度
      */
     private void updateProgress(){
+        if (!isSupportBreakpoint()){
+            return;
+        }
         DownloadProviderTracker.updateDownloadProgress(mContext, mDownloadInfo, mCompeleteSize);
     }
     /**
