@@ -162,7 +162,7 @@ public class RequestQueue {
             networkDispatcher.start();
         }
 
-        //Create a single thread pool for DownloadSizeRequest
+        //Create a single thread pool for DownloadRequest
         /*mNetworkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
                 mCache, mDelivery);
         mDispatchers[0] = mNetworkDispatcher;

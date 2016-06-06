@@ -1,45 +1,76 @@
+/*
+ * Copyright (C) 2011 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package toolbox;
 
-import android.database.Cursor;
-import android.os.SystemClock;
-import com.android.volley.*;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+import android.text.TextUtils;
+import com.android.volley.RequestQueue;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
+import com.android.volley.VolleyError;
 import com.android.volley.VolleyLog;
 import com.android.volley.toolbox.HttpHeaderParser;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import provider.DownloadInfo;
-import provider.DownloadProviderTracker;
-import provider.DownloadTable;
 
-import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+
 
 /**
- * Created by dingding on 23/05/16.
+ * A canned request for retrieving the response body at a given URL as a String.
  */
-public class DownloadRequest extends Request<String>{
-    private static final String TAG = "DownloadRequest";
+public class DownloadRequest extends Request<Long> {
+    /**下载文件划分块的大小*/
+    private static final long BLOCK_SIZE = 2 * 1024 * 1024;
 
-    /** 暂停超时时间 */
-    private static final long PAUSE_TIME_OUT = 2 * 60 * 1000;
+    private static final int MSG_POST_PROGRESS = 1000;
 
-    private final Listener<String> mListener;
-    private String mFilePath;
-    private long mFileSize;
-    private long mStartPos;
-    private long mEndPos;
-    private long mCompeleteSize;
-    private int mBlockId;
-    private int mBlockCount;
+    private final Listener<Long> mListener;
 
-    private DownloadInfo mDownloadInfo;
+    private String mSavePath;//保存路径
+    private String mFileName;//文件名
 
+    private RequestQueue mRequestQueue;
+
+    /** 块下载完成大小数组, 代表每一个块下载完成的大小　*/
+    private long[] mCompleteSize;
+
+    /** 上一次下载的进度 */
+    private int mProgress;
+
+    /**
+     * 主线程handler, 用来对所有块发送来的进度进行统计
+     */
+    Handler mHandler = new Handler(Looper.getMainLooper()){
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what){
+                case MSG_POST_PROGRESS:
+                    handlerProgress(msg);
+                    break;
+            }
+        }
+    };
     /**
      * Creates a new request with the given method.
      *
@@ -48,21 +79,13 @@ public class DownloadRequest extends Request<String>{
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadRequest(int method, String url, String filePath, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount,
-                           Listener<String> listener, ErrorListener errorListener) {
+    public DownloadRequest(int method, RequestQueue queue, String url, String savePath, String fileName, Listener<Long> listener,
+                           ErrorListener errorListener) {
         super(method, url, errorListener);
         mListener = listener;
-        mFilePath = filePath;
-        mFileSize = fileSize;
-        mStartPos = startPos;
-        mEndPos = endPos;
-        mCompeleteSize = completeSize;
-        mBlockId = blockId;
-        mBlockCount = blockCount;
-        mDownloadInfo = new DownloadInfo(url, mFilePath, mFileSize, mStartPos, mEndPos, mCompeleteSize,
-                mBlockId, mBlockCount, State.WAITING.code);
-
-        checkDownloadInfo();
+        mRequestQueue = queue;
+        mSavePath = savePath;
+        mFileName = fileName;
     }
 
     /**
@@ -72,247 +95,208 @@ public class DownloadRequest extends Request<String>{
      * @param listener Listener to receive the String response
      * @param errorListener Error listener, or null to ignore errors
      */
-    public DownloadRequest(String url, String filePath, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount, Listener<String> listener, ErrorListener errorListener) {
-        this(Method.GET, url, filePath, fileSize, startPos, endPos, completeSize, blockId, blockCount, listener, errorListener);
+    public DownloadRequest(RequestQueue queue, String url, String savePath, String fileName, Listener<Long> listener, ErrorListener errorListener) {
+        this(Method.GET, queue, url, savePath, fileName, listener, errorListener);
     }
 
     @Override
     public Type getType() {
-        return Type.DOWNLOAD;
+        return Type.DOWNLOAD_SIZE;
     }
 
     @Override
-    public Map<String, String> getHeaders() throws AuthFailureError {
-        File downloadFile = new File(mFilePath);
-        long fileLen = 0;
-        if (downloadFile.isFile() && downloadFile.exists()) {
-            fileLen = downloadFile.length();
-        }
-        VolleyLog.d("getHeaders...fileLen: " + fileLen + ", mStartPos: " + mStartPos
-                + ", mCompeleteSize: " + mCompeleteSize + ", mEndPos: " + mEndPos);
-        if (fileLen > 0) {
-            Map<String, String> headers = new HashMap<String, String>();
-            headers.put("Range", "bytes=" + String.valueOf(mStartPos + mCompeleteSize) + "-" + String.valueOf(mEndPos));
-            VolleyLog.d("getHeaders...heads: " + headers.entrySet().toString());
-            return headers;
-        }
-        return super.getHeaders();
+    protected void deliverResponse(Long response) {
+        mListener.onResponse(response);
     }
 
     @Override
-    protected void deliverResponse(String response) {
-        if (mListener != null) {
-            mListener.onResponse(response);
+    protected Response<Long> parseNetworkResponse(NetworkResponse response) {
+        //获取文件长度
+        long parsed = response.httpResponse.getEntity().getContentLength();
+        VolleyLog.d("fileSize: " + parsed);
+        //根据文件长度计算需要开启的线程数
+        int threadNum = (int) (parsed / BLOCK_SIZE) + 1;
+        mRequestQueue.threadNum = threadNum;
+        if (parsed > 0 && !TextUtils.isEmpty(mSavePath) && !TextUtils.isEmpty(mFileName)){
+            creatFile(parsed);
+            handlerDownload(parsed);
         }
+        return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response));
     }
 
-    @Override
-    protected Response<String> parseNetworkResponse(NetworkResponse response) {
-        String filename = new String(response.data);
-        if (response.data.length > 0) {
-            return Response.success(filename, null);
-        } else {
-            return Response.error(new ParseError(response));
-        }
-    }
-
-    public boolean isSupportRange(final HttpResponse response) {
-        if (response == null) return false;
-        Header header = response.getFirstHeader("Accept-Ranges");
-        if (header != null) {
-            return "bytes".equals(header.getValue());
-        }
-        header = response.getFirstHeader("Content-Range");
-        if (header != null) {
-            String value = header.getValue();
-            return value != null && value.startsWith("bytes");
-        }
-        return false;
-    }
-
-    @Override
-    public byte[] handleRawResponse(HttpResponse httpResponse) throws IOException, ServerError, CanceledError {
-        int statusCode = httpResponse.getStatusLine().getStatusCode();
-        VolleyLog.d("handleRawResponse...statusCode: " + statusCode);
-        if (statusCode < 300){
-            RandomAccessFile randomAccessFile = null;
-            try {
-                randomAccessFile = new RandomAccessFile(mFilePath, "rwd");
-                randomAccessFile.seek(mStartPos + mCompeleteSize);
-                InputStream inputStream = httpResponse.getEntity().getContent();
-                if (inputStream == null){
-                    throw new ServerError();
-                }
-                if (isCanceled()) {
-                    throw new CanceledError();
-                }
-                updateState(State.LOADING.code);
-                postProgress();
-                byte buffer[] = new byte[4 * 1024];
-                int length = 0;
-                while((length = inputStream.read(buffer, 0, buffer.length)) != -1) {
-                    if (isCanceled()) {
-                        throw new CanceledError();
-                    }
-                    if (isPaused()){
-                        long pausedTime = SystemClock.elapsedRealtime();
-                        while (isPaused()){
-                            long currentTime = SystemClock.elapsedRealtime();
-                            if (currentTime - pausedTime > PAUSE_TIME_OUT){
-                                cancel();
-                                break;
-                            }
-                        }
-                        if (isPaused()){
-                            break;
-                        }
-                    }
-                    randomAccessFile.write(buffer, 0, length);
-                    mCompeleteSize += length;
-                    postProgress();
-                }
-                postProgress();
-                return mFilePath.getBytes();
-            } catch (FileNotFoundException e){
-                VolleyLog.e("filepath not exit");
-                e.printStackTrace();
-            } finally {
-                //inputStream.close();
-                randomAccessFile.close();
+    /**
+     *　根据文件大小创建文件
+     * @param fileSize 文件大小
+     */
+    private void creatFile(long fileSize){
+        VolleyLog.d("savePath: " + mSavePath + ", fileName: " + mFileName);
+        File dir = new File(mSavePath);
+        if(!dir.exists()) {
+            if(dir.mkdirs()) {
+                VolleyLog.d("mkdirs success.");
             }
-        } else if (statusCode == 416) {
-            throw new IOException("may be the file have been download finished.");
-        } else {
-            throw new IOException();
         }
-        return super.handleRawResponse(httpResponse);
+        File file = new File(mSavePath, mFileName);
+        RandomAccessFile randomFile= null;
+        try {
+            randomFile = new RandomAccessFile(file,"rwd");
+            randomFile.setLength(fileSize);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e){
+            e.printStackTrace();
+        } finally {
+            try {
+                if(randomFile != null){
+                    randomFile.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 根据文件大小进行分块下载
+     * @param size 需要下载的文件大小
+     */
+    private void handlerDownload(long size){
+        VolleyLog.d("download size: " + size);
+        if (size > BLOCK_SIZE){
+            int blockCount = (int) (size / BLOCK_SIZE) + 1;
+            mCompleteSize = new long[blockCount];
+            if (blockCount > 1){
+                long startPos = 0;
+                long endPos = -1;
+                for (int i = 0; i < blockCount; i++){
+                    startPos = endPos + 1;
+                    if (i == blockCount - 1){
+                        endPos = size;
+                    } else {
+                        endPos = startPos + BLOCK_SIZE;
+                    }
+
+                    download(size, startPos, endPos, 0, i, blockCount);
+                }
+            }
+        } else {
+            //只启动一个线程下载
+            mCompleteSize = new long[1];
+            download(size, 0, size, 0, 0, 1);
+        }
+    }
+
+    /**
+     * 开始下载文件
+     * @param startPos 下载开始位置
+     * @param endPos　下载结束位置
+     * @param completeSize　下载完成大小
+     * @param blockId　下载块的id
+     * @param blockCount 下载块的数量
+     */
+    private void download(long fileSize, long startPos, long endPos, long completeSize, final int blockId, final int blockCount){
+        final String filePath = mSavePath + File.separator + mFileName;
+        VolleyLog.d("download...filePath: " + filePath + ", startPos: " + startPos + ", endPos: " + endPos
+                + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
+        DownloadBlockRequest request = new DownloadBlockRequest(
+                getUrl(), filePath, fileSize, startPos, endPos, completeSize, blockId, blockCount,
+                new Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        //VolleyLog.d("success: " + response);
+                    }
+                },
+                new ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        VolleyLog.e("error:" + filePath + ", blockId: " + blockId + ", blockCount: " + blockCount);
+                        error.printStackTrace();
+                    }
+                });
+        request.setLoadingListener(new Response.LoadingListener(){
+            @Override
+            public void onLoading(Request.Type type, long fileSize, long startPos, long endPos, long completeSize, int blockId, int blockCount) {
+                VolleyLog.d("type: " + type + ", startPos: " + startPos + ", endPos: " + endPos
+                + ", completeSize: " + completeSize + ", blockId: " + blockId + ", blockCount: " + blockCount);
+                postProgressToHandler(fileSize, completeSize, blockId);
+            }
+        });
+        request.attach(mContext);
+        request.setTag(getTag());
+        if (mRequestQueue != null){
+            mRequestQueue.add(request);
+        }
+    }
+
+    /**
+     * 将每个块的进度发送到handler顺序统计进度
+     * @param fileSize
+     * @param completeSize
+     * @param blockId
+     */
+    private void postProgressToHandler(long fileSize, long completeSize, int blockId){
+        Object[] obj = new Object[3];
+        obj[0] = fileSize;
+        obj[1] = completeSize;
+        obj[2] = blockId;
+        Message msg = mHandler.obtainMessage(MSG_POST_PROGRESS, obj);
+        msg.sendToTarget();
+    }
+
+    /**
+     * 对块传来的进度进行重新计算
+     * @param msg
+     */
+    private void handlerProgress(Message msg){
+        Object[] obj = (Object[]) msg.obj;
+        long fileSize = (Long) obj[0];
+        long completeSize = (Long) obj[1];
+        int blockId = (Integer) obj[2];
+        mCompleteSize[blockId] = completeSize;
+
+        long totalCompleteSize = 0;
+        for (long complete : mCompleteSize){
+            totalCompleteSize += complete;
+        }
+
+        int progress = (int) (100 * totalCompleteSize / fileSize);
+        if (progress - mProgress >= 1){
+            postProgress(getType(), totalCompleteSize, progress);
+            mProgress = progress;
+        }
+    }
+
+    /**
+     * 获得文件路径
+     * @return
+     */
+    private String getFilePath(){
+        if (mSavePath.endsWith(File.separator)){
+            return mSavePath + mFileName;
+        }
+        return mSavePath + File.separator + mFileName;
     }
 
     @Override
     public void cancel() {
-        if (isCanceled()){
-            return;
-        }
-        updateState(State.CANCEL.code, true);
         super.cancel();
+        mRequestQueue.cancelAll(getTag());
     }
 
     @Override
     public void pause() {
-        if (isPaused()){
-            return;
-        }
-        updateState(State.PAUSE.code, true);
         super.pause();
+        mRequestQueue.pauseAll(getTag());
     }
 
     @Override
     public void resume() {
-        if (!isPaused()){
-            return;
-        }
-        updateState(State.LOADING.code);
         super.resume();
+        mRequestQueue.resumeAll(getTag());
     }
 
-    /**
-     * 发送进度
-     */
-    private void postProgress(){
-        postProgress(Type.DOWNLOAD, mFileSize, mStartPos, mEndPos, mCompeleteSize, mBlockId, mBlockCount);
-    }
-
-    /**
-     * 检测该DownloadInfo
-     */
-    private void checkDownloadInfo(){
-        if (!isSupportBreakpoint()){
-            VolleyLog.e(TAG, "not support breakpoint");
-            return;
-        }
-        /**检测文件存不存在*/
-
-        /**检测数据库存不存在该DownloadInfo*/
-        if (isDownloadInfoExist()){
-            updateState(State.WAITING.code);
-        } else {
-            DownloadProviderTracker.insertDownloadInfo(mContext, mDownloadInfo);
-        }
-    }
-
-    /**
-     * 该downloadInfo是否存在
-     * 注：如果存在的话重新赋值mCompleteSize
-     * @return
-     */
-    private boolean isDownloadInfoExist(){
-        Cursor cursor = null;
-        try {
-            cursor = DownloadProviderTracker.queryDownloadInfo(mContext, mDownloadInfo);
-            if (cursor != null && cursor.moveToFirst()){
-                String complete = cursor.getString(cursor.getColumnIndex(DownloadTable.DownloadInfo.COMPLETE_SIZE));
-                mCompeleteSize = Long.valueOf(complete);
-                return true;
-            }
-        } catch (Exception e){
-            e.printStackTrace();
-        } finally {
-            if (cursor != null){
-                cursor.close();
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 更新下载状态
-     * @param state
-     */
-    private void updateState(int state){
-        updateState(state, false);
-    }
-
-    /**
-     *  更新下载状态
-     * @param state
-     * @param updateProgress　是否更新进度
-     */
-    private void updateState(int state, boolean updateProgress){
-        if (!isSupportBreakpoint()){
-            return;
-        }
-        if (updateProgress){
-            DownloadProviderTracker.updateDownloadStateAndPrgress(mContext, mDownloadInfo, mCompeleteSize, state);
-        } else {
-            DownloadProviderTracker.updateDownloadState(mContext, mDownloadInfo, state);
-        }
-    }
-
-    /**
-     * 更新下载进度
-     */
-    private void updateProgress(){
-        if (!isSupportBreakpoint()){
-            return;
-        }
-        DownloadProviderTracker.updateDownloadProgress(mContext, mDownloadInfo, mCompeleteSize);
-    }
-    /**
-     * download state
-     */
-    public enum State{
-        INIT(DownloadTable.DownloadInfo.INIT),
-        WAITING(DownloadTable.DownloadInfo.WAITING),
-        LOADING(DownloadTable.DownloadInfo.LOADING),
-        CANCEL(DownloadTable.DownloadInfo.CANCEL),
-        PAUSE(DownloadTable.DownloadInfo.PAUSE),
-        SUCCESS(DownloadTable.DownloadInfo.SUCCESS),
-        FAIL(DownloadTable.DownloadInfo.FAIL);
-
-        public int code;
-
-        State(int code){
-            this.code = code;
-        }
+    @Override
+    public Request<?> setTag(Object tag) {
+        return super.setTag(getFilePath()+getUrl());
     }
 }
