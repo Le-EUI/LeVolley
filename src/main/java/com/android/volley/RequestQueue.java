@@ -151,22 +151,22 @@ public class RequestQueue {
         stop();  // Make sure any currently running dispatchers are stopped.
         // Create the cache dispatcher and start it.
         mCacheDispatcher = new CacheDispatcher(mCacheQueue, mNetworkQueue, mCache, mDelivery);
-        mThreadManager.getSinglePool("cacheThread").execute(mCacheDispatcher);
-        //mCacheDispatcher.start();
+        //mThreadManager.getSinglePool("cacheThread").execute(mCacheDispatcher);
+        mCacheDispatcher.start();
 
         // Create network dispatchers (and corresponding threads) up to the pool size.
-//        for (int i = 0; i < mDispatchers.length; i++) {
-//            NetworkDispatcher networkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
-//                    mCache, mDelivery);
-//            mDispatchers[i] = networkDispatcher;
-//            networkDispatcher.start();
-//        }
+        for (int i = 0; i < mDispatchers.length; i++) {
+            NetworkDispatcher networkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
+                    mCache, mDelivery);
+            mDispatchers[i] = networkDispatcher;
+            networkDispatcher.start();
+        }
 
         //Create a single thread pool for DownloadSizeRequest
-        mNetworkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
+        /*mNetworkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
                 mCache, mDelivery);
         mDispatchers[0] = mNetworkDispatcher;
-        threadManager.getSinglePool("networkThread").execute(mNetworkDispatcher);
+        threadManager.getSinglePool("networkThread").execute(mNetworkDispatcher);*/
     }
 
     /*
@@ -182,7 +182,7 @@ public class RequestQueue {
         mCacheDispatcher.start();
 
         ThreadManager threadManager = new ThreadManager(threadNum);
-        threadManager.getDownloadPool().execute(mNetworkDispatcher);
+        //threadManager.getDownloadPool("").execute(mNetworkDispatcher);
 
     }
 
@@ -245,6 +245,66 @@ public class RequestQueue {
             throw new IllegalArgumentException("Cannot cancelAll with a null tag");
         }
         cancelAll(new RequestFilter() {
+            @Override
+            public boolean apply(Request<?> request) {
+                return request.getTag() == tag;
+            }
+        });
+    }
+
+    /**
+     * Pause all requests in this queue for which the given filter applies.
+     * @param filter The filtering function to use
+     */
+    public void pauseAll(RequestFilter filter){
+        synchronized (mCurrentRequests) {
+            for (Request<?> request : mCurrentRequests) {
+                if (filter.apply(request)) {
+                    request.pause();
+                }
+            }
+        }
+    }
+
+    /**
+     * Pause all requests in this queue with the given tag. Tag must be non-null
+     * and equality is by identity.
+     */
+    public void pauseAll(final Object tag) {
+        if (tag == null) {
+            throw new IllegalArgumentException("Cannot pauseAll with a null tag");
+        }
+        pauseAll(new RequestFilter() {
+            @Override
+            public boolean apply(Request<?> request) {
+                return request.getTag() == tag;
+            }
+        });
+    }
+
+    /**
+     * Pause all requests in this queue for which the given filter applies.
+     * @param filter The filtering function to use
+     */
+    public void resumeAll(RequestFilter filter){
+        synchronized (mCurrentRequests) {
+            for (Request<?> request : mCurrentRequests) {
+                if (filter.apply(request)) {
+                    request.resume();
+                }
+            }
+        }
+    }
+
+    /**
+     * Resume all requests in this queue with the given tag. Tag must be non-null
+     * and equality is by identity.
+     */
+    public void resumeAll(final Object tag) {
+        if (tag == null) {
+            throw new IllegalArgumentException("Cannot resumeAll with a null tag");
+        }
+        resumeAll(new RequestFilter() {
             @Override
             public boolean apply(Request<?> request) {
                 return request.getTag() == tag;

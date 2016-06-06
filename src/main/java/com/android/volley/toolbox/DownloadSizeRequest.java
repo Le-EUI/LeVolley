@@ -219,6 +219,8 @@ public class DownloadSizeRequest extends Request<Long> {
                 postProgressToHandler(fileSize, completeSize, blockId);
             }
         });
+        request.attach(mContext);
+        request.setTag(getTag());
         if (mRequestQueue != null){
             mRequestQueue.add(request);
         }
@@ -260,5 +262,39 @@ public class DownloadSizeRequest extends Request<Long> {
             postProgress(getType(), totalCompleteSize, progress);
             mProgress = progress;
         }
+    }
+
+    /**
+     * 获得文件路径
+     * @return
+     */
+    private String getFilePath(){
+        if (mSavePath.endsWith(File.separator)){
+            return mSavePath + mFileName;
+        }
+        return mSavePath + File.separator + mFileName;
+    }
+
+    @Override
+    public void cancel() {
+        super.cancel();
+        mRequestQueue.cancelAll(getTag());
+    }
+
+    @Override
+    public void pause() {
+        super.pause();
+        mRequestQueue.pauseAll(getTag());
+    }
+
+    @Override
+    public void resume() {
+        super.resume();
+        mRequestQueue.resumeAll(getTag());
+    }
+
+    @Override
+    public Request<?> setTag(Object tag) {
+        return super.setTag(getFilePath()+getUrl());
     }
 }

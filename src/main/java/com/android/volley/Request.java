@@ -155,7 +155,7 @@ public abstract class Request<T> implements Comparable<Request<T>> {
     }
 
     /** attach context*/
-    protected void attach(Context context){
+    public void attach(Context context){
         mContext = context;
     }
     /**
@@ -368,6 +368,13 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     public void pause(){
         mPaused = true;
+    }
+
+    /**
+     * Mark this request as resume
+     */
+    public void resume(){
+        mPaused = false;
     }
 
     /**

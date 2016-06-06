@@ -85,6 +85,21 @@ public class DownloadProviderTracker {
     }
 
     /**
+     * update download state and progress
+     * @param context
+     * @param info
+     * @param completeSize
+     * @param state
+     * @return
+     */
+    public static boolean updateDownloadStateAndPrgress(Context context, DownloadInfo info, long completeSize, int state){
+        ContentValues values = new ContentValues();
+        values.put(DownloadTable.DownloadInfo.COMPLETE_SIZE, String.valueOf(completeSize));
+        values.put(DownloadTable.DownloadInfo.STATE, state);
+        return updateDownloadInfo(context, info, values);
+    }
+
+    /**
      * query download info
      * @param context
      * @param info

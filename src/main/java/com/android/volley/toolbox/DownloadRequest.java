@@ -1,6 +1,7 @@
 package toolbox;
 
 import android.database.Cursor;
+import android.os.SystemClock;
 import com.android.volley.*;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
@@ -24,6 +25,9 @@ import java.util.Map;
  */
 public class DownloadRequest extends Request<String>{
     private static final String TAG = "DownloadRequest";
+
+    /** 暂停超时时间 */
+    private static final long PAUSE_TIME_OUT = 2 * 60 * 1000;
 
     private final Listener<String> mListener;
     private String mFilePath;
@@ -147,11 +151,24 @@ public class DownloadRequest extends Request<String>{
                 byte buffer[] = new byte[4 * 1024];
                 int length = 0;
                 while((length = inputStream.read(buffer, 0, buffer.length)) != -1) {
-                    randomAccessFile.write(buffer, 0, length);
-                    mCompeleteSize += length;
                     if (isCanceled()) {
                         throw new CanceledError();
                     }
+                    if (isPaused()){
+                        long pausedTime = SystemClock.elapsedRealtime();
+                        while (isPaused()){
+                            long currentTime = SystemClock.elapsedRealtime();
+                            if (currentTime - pausedTime > PAUSE_TIME_OUT){
+                                cancel();
+                                break;
+                            }
+                        }
+                        if (isPaused()){
+                            break;
+                        }
+                    }
+                    randomAccessFile.write(buffer, 0, length);
+                    mCompeleteSize += length;
                     postProgress();
                 }
                 postProgress();
@@ -172,21 +189,30 @@ public class DownloadRequest extends Request<String>{
     }
 
     @Override
-    public boolean isCanceled() {
-        boolean isCanceled = super.isCanceled();
-        if (isCanceled){
-            updateState(State.CANCEL.code);
+    public void cancel() {
+        if (isCanceled()){
+            return;
         }
-        return isCanceled;
+        updateState(State.CANCEL.code, true);
+        super.cancel();
     }
 
     @Override
-    public boolean isPaused() {
-        boolean isPaused =  super.isPaused();
-        if (isPaused){
-            updateState(State.PAUSE.code);
+    public void pause() {
+        if (isPaused()){
+            return;
         }
-        return isPaused;
+        updateState(State.PAUSE.code, true);
+        super.pause();
+    }
+
+    @Override
+    public void resume() {
+        if (!isPaused()){
+            return;
+        }
+        updateState(State.LOADING.code);
+        super.resume();
     }
 
     /**
@@ -243,10 +269,23 @@ public class DownloadRequest extends Request<String>{
      * @param state
      */
     private void updateState(int state){
+        updateState(state, false);
+    }
+
+    /**
+     *  更新下载状态
+     * @param state
+     * @param updateProgress　是否更新进度
+     */
+    private void updateState(int state, boolean updateProgress){
         if (!isSupportBreakpoint()){
             return;
         }
-        DownloadProviderTracker.updateDownloadState(mContext, mDownloadInfo, state);
+        if (updateProgress){
+            DownloadProviderTracker.updateDownloadStateAndPrgress(mContext, mDownloadInfo, mCompeleteSize, state);
+        } else {
+            DownloadProviderTracker.updateDownloadState(mContext, mDownloadInfo, state);
+        }
     }
 
     /**
