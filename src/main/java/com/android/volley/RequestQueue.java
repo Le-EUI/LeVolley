@@ -151,7 +151,8 @@ public class RequestQueue {
         stop();  // Make sure any currently running dispatchers are stopped.
         // Create the cache dispatcher and start it.
         mCacheDispatcher = new CacheDispatcher(mCacheQueue, mNetworkQueue, mCache, mDelivery);
-        mCacheDispatcher.start();
+        mThreadManager.getSinglePool("cacheThread").execute(mCacheDispatcher);
+        //mCacheDispatcher.start();
 
         // Create network dispatchers (and corresponding threads) up to the pool size.
 //        for (int i = 0; i < mDispatchers.length; i++) {
@@ -165,7 +166,7 @@ public class RequestQueue {
         mNetworkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
                 mCache, mDelivery);
         mDispatchers[0] = mNetworkDispatcher;
-        threadManager.getSinglePool().execute(mNetworkDispatcher);
+        threadManager.getSinglePool("networkThread").execute(mNetworkDispatcher);
     }
 
     /*

@@ -7,6 +7,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 /**
  * 生成一个线程池
  * 取消线程池中的任务
@@ -36,21 +44,29 @@ public class ThreadManager {
         this.threadNums = threadNums;
     }
 
+    public ThreadManager(){
+
+    }
+
     //获取下载线程
-    public static ThreadPoolProxy getDownloadPool(){
+    public static ThreadPoolProxy getDownloadPool(String name, int num){
         synchronized (mDownloadLock){
+            ThreadPoolProxy downloadPool = mMap.get(name);
             if(mDownloadPool == null){
-                mDownloadPool = new ThreadPoolProxy(threadNums, threadNums, 5L);
+                mDownloadPool = new ThreadPoolProxy(num, num, 5L);
+                mMap.put(name, downloadPool);
             }
             return mDownloadPool;
         }
     }
 
     //获取一个用于执行长耗时任务的线程池，避免和短耗时任务处在同一个队列而阻塞了重要的短耗时任务，通常用来联网操作
-    public static ThreadPoolProxy getLongPool(){
+    public static ThreadPoolProxy getLongPool(String name){
         synchronized (mLongLock){
+            ThreadPoolProxy longPool = mMap.get(name);
             if(mLongPool == null){
                 mLongPool = new ThreadPoolProxy(5, 5, 5L);
+                mMap.put(name, mLongPool);
             }
             return mLongPool;
         }
@@ -66,12 +82,12 @@ public class ThreadManager {
         }
     }
 
-    //获取一个单线程池，所有任务将会被按照哦加入的顺序执行，面除了同步开销的问题
+    //获取一个单线程池，所有任务将会被按照加入的顺序执行，免除了同步开销的问题
     public static ThreadPoolProxy getSinglePool(){
         return getSinglePool(DEFAULT_SINGLE_POOL_NAME);
     }
 
-    //获取一个单线程池，所有任务江会被按照加入的顺序执行，免除了同步开销的问题
+    //获取一个单线程池，所有任务将会被按照加入的顺序执行，免除了同步开销的问题
     public static ThreadPoolProxy getSinglePool(String name){
         synchronized (mSingleLock){
             ThreadPoolProxy singlePool = mMap.get(name);
@@ -122,7 +138,7 @@ public class ThreadManager {
             }
         }
 
-        //取消线程池中某个还未执行的任务
+        //查询线程池是否包含某任务
         public synchronized boolean contains(Runnable run){
             if(mPool != null && (!mPool.isShutdown() || mPool.isTerminating())){
                 return mPool.getQueue().contains(run);
