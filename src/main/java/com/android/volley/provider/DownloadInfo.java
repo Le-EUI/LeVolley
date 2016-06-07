@@ -1,4 +1,4 @@
-package provider;
+package com.android.volley.provider;
 
 /**
  * Created by dingding on 30/05/16.

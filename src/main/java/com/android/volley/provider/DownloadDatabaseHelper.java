@@ -1,4 +1,4 @@
-package provider;
+package com.android.volley.provider;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;

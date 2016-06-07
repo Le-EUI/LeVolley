@@ -18,7 +18,6 @@ package com.android.volley;
 
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,7 +30,8 @@ import java.util.Set;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import main.java.com.android.volley.toolbox.ThreadManager;
+import com.android.volley.toolbox.GetDeviceInfo;
+import com.android.volley.toolbox.ThreadManager;
 
 /**
  * A request dispatch queue with a thread pool of dispatchers.
@@ -102,8 +102,10 @@ public class RequestQueue {
 
     /*The number of threads that the file needs.*/
     public int threadNum;
+    public int maxThreadNum;
+    public int coreNum;
     public NetworkDispatcher[] mNetworkDispatchers;
-    public ThreadManager threadManager;
+    public ThreadManager mThreadManager;
     public NetworkDispatcher mNetworkDispatcher;
 
     /**
@@ -149,42 +151,54 @@ public class RequestQueue {
      */
     public void start() {
         stop();  // Make sure any currently running dispatchers are stopped.
+        mThreadManager = new ThreadManager();
+
         // Create the cache dispatcher and start it.
         mCacheDispatcher = new CacheDispatcher(mCacheQueue, mNetworkQueue, mCache, mDelivery);
-        //mThreadManager.getSinglePool("cacheThread").execute(mCacheDispatcher);
-        mCacheDispatcher.start();
+        mThreadManager.getSinglePool("CacheThread").execute(mCacheDispatcher);
+        //mCacheDispatcher.start();
 
         // Create network dispatchers (and corresponding threads) up to the pool size.
-        for (int i = 0; i < mDispatchers.length; i++) {
-            NetworkDispatcher networkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
-                    mCache, mDelivery);
-            mDispatchers[i] = networkDispatcher;
-            networkDispatcher.start();
-        }
+//        for (int i = 0; i < mDispatchers.length; i++) {
+//            NetworkDispatcher networkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
+//                    mCache, mDelivery);
+//            mDispatchers[i] = networkDispatcher;
+//            networkDispatcher.start();
+//        }
 
         //Create a single thread pool for DownloadRequest
-        /*mNetworkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
+        mNetworkDispatcher = new NetworkDispatcher(mNetworkQueue, mNetwork,
                 mCache, mDelivery);
-        mDispatchers[0] = mNetworkDispatcher;
-        threadManager.getSinglePool("networkThread").execute(mNetworkDispatcher);*/
+        //mDispatchers[0] = mNetworkDispatcher;
+        mThreadManager.getSinglePool("SingleNetworkThread").execute(mNetworkDispatcher);
     }
 
-    /*
-    * starts long thread pool in this queue.
-    * */
+    /**
+     * 根据文件长度开启线程池中相应的线程数
+     * 第一次开启一个缓存线程以及一个网络线程，对文件大小进行网络请求
+     * 然后在开启多个线程
+     * **/
+    public void startMultiThread(){
 
-    public void startThreadPool(){
-        //make sure any currently running dispatchers are stopped.
-        threadManager.getSinglePool().cancel(mNetworkDispatcher);
+        //关闭文件大小网络请求线程
+        if(mThreadManager.getSinglePool("SingleNetworkThread").contains(mNetworkDispatcher)){
+            mThreadManager.getSinglePool("SingleNetworkThread").stop();
+            mThreadManager.mMap.remove("SingleNetworkThread");
+        }
 
-        // Create the cache dispatcher and start it.
-        mCacheDispatcher = new CacheDispatcher(mCacheQueue, mNetworkQueue, mCache, mDelivery);
-        mCacheDispatcher.start();
+        GetDeviceInfo getDeviceInfo = new GetDeviceInfo();
+        coreNum = getDeviceInfo.getNumberOfCores();
+        maxThreadNum = coreNum;
+        if (threadNum >= maxThreadNum){
+            threadNum = maxThreadNum;
+        }
 
-        ThreadManager threadManager = new ThreadManager(threadNum);
-        //threadManager.getDownloadPool("").execute(mNetworkDispatcher);
+        for(int i=0; i<threadNum; i++){
+            mThreadManager.getDownloadPool(threadNum).execute(mNetworkDispatcher);
+        }
 
     }
+
 
     /**
      * Stops the cache and network dispatchers.
@@ -197,6 +211,9 @@ public class RequestQueue {
             if (mDispatchers[i] != null) {
                 mDispatchers[i].quit();
             }
+        }
+        if(mThreadManager.mDownloadPool != null){
+            mThreadManager.mDownloadPool.stop();
         }
     }
 

@@ -1,4 +1,4 @@
-package toolbox;
+package com.android.volley.toolbox;
 
 import android.database.Cursor;
 import android.os.SystemClock;
@@ -11,9 +11,9 @@ import com.android.volley.Response.Listener;
 import com.android.volley.VolleyLog;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
-import provider.DownloadInfo;
-import provider.DownloadProviderTracker;
-import provider.DownloadTable;
+import com.android.volley.provider.DownloadInfo;
+import com.android.volley.provider.DownloadProviderTracker;
+import com.android.volley.provider.DownloadTable;
 
 import java.io.*;
 import java.util.HashMap;

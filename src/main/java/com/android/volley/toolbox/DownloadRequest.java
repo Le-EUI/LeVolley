@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package toolbox;
+package com.android.volley.toolbox;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -28,7 +28,6 @@ import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
 import com.android.volley.VolleyError;
 import com.android.volley.VolleyLog;
-import com.android.volley.toolbox.HttpHeaderParser;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -117,6 +116,8 @@ public class DownloadRequest extends Request<Long> {
         //根据文件长度计算需要开启的线程数
         int threadNum = (int) (parsed / BLOCK_SIZE) + 1;
         mRequestQueue.threadNum = threadNum;
+        /**根据文件长度开始线程池中多个线程**/
+        mRequestQueue.startMultiThread();
         if (parsed > 0 && !TextUtils.isEmpty(mSavePath) && !TextUtils.isEmpty(mFileName)){
             creatFile(parsed);
             handlerDownload(parsed);

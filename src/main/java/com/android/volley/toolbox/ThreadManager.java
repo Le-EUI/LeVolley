@@ -1,11 +1,4 @@
-package main.java.com.android.volley.toolbox;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+package com.android.volley.toolbox;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,10 +26,10 @@ public class ThreadManager {
     private static ThreadPoolProxy mShortPool = null;
     private static Object mShortLock = new Object();
 
-    private static ThreadPoolProxy mDownloadPool = null;
+    public static ThreadPoolProxy mDownloadPool = null;
     private static Object mDownloadLock = new Object();
 
-    private static Map<String, ThreadPoolProxy> mMap = new HashMap<String, ThreadPoolProxy>();
+    public static Map<String, ThreadPoolProxy> mMap = new HashMap<String, ThreadPoolProxy>();
     private static Object mSingleLock = new Object();
 
     public ThreadManager(int threadNums){
@@ -47,25 +40,25 @@ public class ThreadManager {
 
     }
 
+    public Map<String, ThreadPoolProxy> getMap(){
+        return mMap;
+    }
+
     //获取下载线程
-    public static ThreadPoolProxy getDownloadPool(String name, int num){
+    public static ThreadPoolProxy getDownloadPool(int num){
         synchronized (mDownloadLock){
-            ThreadPoolProxy downloadPool = mMap.get(name);
             if(mDownloadPool == null){
                 mDownloadPool = new ThreadPoolProxy(num, num, 5L);
-                mMap.put(name, downloadPool);
             }
             return mDownloadPool;
         }
     }
 
     //获取一个用于执行长耗时任务的线程池，避免和短耗时任务处在同一个队列而阻塞了重要的短耗时任务，通常用来联网操作
-    public static ThreadPoolProxy getLongPool(String name){
+    public static ThreadPoolProxy getLongPool(){
         synchronized (mLongLock){
-            ThreadPoolProxy longPool = mMap.get(name);
             if(mLongPool == null){
                 mLongPool = new ThreadPoolProxy(5, 5, 5L);
-                mMap.put(name, mLongPool);
             }
             return mLongPool;
         }
@@ -73,7 +66,7 @@ public class ThreadManager {
 
     //获取一个用于执行短耗时任务的线程池，避免和短耗时任务处在同一个队列而阻塞了重要的长耗时任务，通常用来执行本地IO/SQL
     public static ThreadPoolProxy getShortPool(){
-        synchronized (mLongLock){
+        synchronized (mShortLock){
             if(mShortLock == null){
                 mShortPool = new ThreadPoolProxy(2, 2, 5L);
             }
@@ -156,8 +149,13 @@ public class ThreadManager {
         //平缓关闭单任务线程池，但是会确保所有已经加入的任务都将会被执行完毕才关闭
         public synchronized void shutdown(){
             if(mPool != null && (!mPool.isShutdown() || mPool.isTerminating())){
-                mPool.shutdownNow();
+                mPool.shutdown();
             }
+        }
+
+        //返回线程池中现有线程的数量
+        public synchronized int getThreadPoolSize(){
+            return mPool.getPoolSize();
         }
 
     }

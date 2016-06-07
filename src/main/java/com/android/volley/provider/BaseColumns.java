@@ -1,5 +1,5 @@
 
-package provider;
+package com.android.volley.provider;
 
 public interface BaseColumns
 {
