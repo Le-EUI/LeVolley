@@ -281,7 +281,7 @@ public class DownloadBlockRequest extends Request<String>{
             return;
         }
         if (updateProgress){
-            DownloadProviderTracker.updateDownloadStateAndPrgress(mContext, mDownloadInfo, mCompeleteSize, state);
+            DownloadProviderTracker.updateDownloadStateAndProgress(mContext, mDownloadInfo, mCompeleteSize, state);
         } else {
             DownloadProviderTracker.updateDownloadState(mContext, mDownloadInfo, state);
         }

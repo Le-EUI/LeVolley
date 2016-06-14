@@ -109,7 +109,9 @@ public class NetworkDispatcher extends Thread {
                 addTrafficStatsTag(request);
 
                 // Perform the network request.
+                request.markLoading(true);
                 NetworkResponse networkResponse = mNetwork.performRequest(request);
+                request.markLoading(false);
                 request.addMarker("network-http-complete");
 
                 // If the server returned 304 AND we delivered a response already,
@@ -136,6 +138,7 @@ public class NetworkDispatcher extends Thread {
             } catch (VolleyError volleyError) {
                 volleyError.setNetworkTimeMs(SystemClock.elapsedRealtime() - startTimeMs);
                 parseAndDeliverNetworkError(request, volleyError);
+                request.markLoading(false);
             } catch (Exception e) {
                 VolleyLog.e(e, "Unhandled exception %s", e.toString());
                 VolleyError volleyError = new VolleyError(e);

@@ -222,6 +222,9 @@ public class DownloadRequest extends Request<Long> {
                 postProgressToHandler(fileSize, completeSize, blockId);
             }
         });
+        if (mContext == null){
+            VolleyLog.d("don't support breakpoint");
+        }
         request.attach(mContext);
         request.setTag(getTag());
         if (mRequestQueue != null){

@@ -103,8 +103,11 @@ public abstract class Request<T> implements Comparable<Request<T>> {
     /** Whether or not this request has been canceled. */
     private boolean mCanceled = false;
 
-    /** Whether or not this request has been paused.  */
+    /** Whether or not this request has been paused. */
     private boolean mPaused = false;
+
+    /** Whether or not this request is loading. */
+    private boolean mLoading = false;
 
     /** Whether or not a response has been delivered for this request yet. */
     private boolean mResponseDelivered = false;
@@ -353,7 +356,11 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      * Mark this request as canceled.  No callback will be delivered.
      */
     public void cancel() {
+        pause();
         mCanceled = true;
+        if (isLoading()){
+            markLoading(false);
+        }
     }
 
     /**
@@ -368,13 +375,51 @@ public abstract class Request<T> implements Comparable<Request<T>> {
      */
     public void pause(){
         mPaused = true;
+        if (isLoading()){
+            markLoading(false);
+        }
     }
 
     /**
      * Mark this request as resume
      */
     public void resume(){
-        mPaused = false;
+        if (isLoading()){
+            return;
+        }
+        if (!isCanceled() && isPaused()){
+            mPaused = false;
+            markLoading(true);
+        } else {
+            reLoading();
+        }
+    }
+
+    /**
+     * re loading
+     */
+    protected void reLoading(){
+        if (mRequestQueue != null){
+            mRequestQueue.add(this);
+            //设置优先级
+        }
+    }
+
+    /**
+     * Mark this request as loading
+     * @param isLoading
+     */
+    public void markLoading(boolean isLoading){
+        mLoading = isLoading;
+        addMarker("mark-loading-"+isLoading);
+    }
+
+    /**
+     * Returns true if this request is loading
+     * @return
+     */
+    public boolean isLoading(){
+        return mLoading;
     }
 
     /**
@@ -384,6 +429,13 @@ public abstract class Request<T> implements Comparable<Request<T>> {
         return mPaused;
     }
 
+    /**
+     * support breakpoint
+     * {@link #attach(Context)}
+     */
+    public void supportBreakpoint(Context context){
+        attach(context);
+    }
     /**
      * is support breakpoint
      */
