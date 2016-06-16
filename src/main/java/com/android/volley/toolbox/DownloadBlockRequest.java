@@ -1,5 +1,6 @@
 package com.android.volley.toolbox;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.os.SystemClock;
 import com.android.volley.*;
@@ -60,8 +61,6 @@ public class DownloadBlockRequest extends Request<String>{
         mBlockCount = blockCount;
         mDownloadInfo = new DownloadInfo(url, mFilePath, mFileSize, mStartPos, mEndPos, mCompeleteSize,
                 mBlockId, mBlockCount, State.WAITING.code);
-
-        checkDownloadInfo();
     }
 
     /**
@@ -221,18 +220,26 @@ public class DownloadBlockRequest extends Request<String>{
         postProgress(Type.DOWNLOAD, mFileSize, mStartPos, mEndPos, mCompeleteSize, mBlockId, mBlockCount);
     }
 
+    @Override
+    public void attach(Context context) {
+        super.attach(context);
+        checkDownloadInfo();
+    }
+
     /**
      * 检测该DownloadInfo
      */
     private void checkDownloadInfo(){
         if (!isSupportBreakpoint()){
-            VolleyLog.e(TAG, "not support breakpoint");
+            VolleyLog.e("not support breakpoint");
             return;
         }
         /**检测文件存不存在*/
 
         /**检测数据库存不存在该DownloadInfo*/
-        if (isDownloadInfoExist()){
+        boolean isDownloadInfoExist = isDownloadInfoExist();
+        VolleyLog.d("isDownloadInfoExist: " + isDownloadInfoExist);
+        if (isDownloadInfoExist){
             updateState(State.WAITING.code);
         } else {
             DownloadProviderTracker.insertDownloadInfo(mContext, mDownloadInfo);
@@ -255,6 +262,7 @@ public class DownloadBlockRequest extends Request<String>{
             }
         } catch (Exception e){
             e.printStackTrace();
+            VolleyLog.d("Exception: " + e);
         } finally {
             if (cursor != null){
                 cursor.close();

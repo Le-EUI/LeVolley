@@ -35,12 +35,12 @@ public class DownloadProviderTracker {
      * @return
      */
     public static long insertDownloadInfo(Context context, DownloadInfo info){
-        VolleyLog.d(TAG, "insertDownloadInfo... start");
+        VolleyLog.d("insertDownloadInfo... start");
         ContentResolver resolver = context.getContentResolver();
         ContentValues values = createContentValues(info);
         Uri uri = resolver.insert(DOWNLOAD_CONTENT_URI, values);
         String itemId = uri.getPathSegments().get(1);
-        VolleyLog.d(TAG, "insertDownloadInfo... end--> new item id : " + itemId);
+        VolleyLog.d("insertDownloadInfo... end--> new item id : " + itemId);
         return Integer.valueOf(itemId).longValue();
     }
 
@@ -106,12 +106,12 @@ public class DownloadProviderTracker {
      * @return
      */
     public static Cursor queryDownloadInfo(Context context, DownloadInfo info){
-        VolleyLog.d(TAG, "queryDownloadInfo... start");
+        VolleyLog.d("queryDownloadInfo... start");
         ContentResolver resolver = context.getContentResolver();
         String selection = WHERE;
         String[] selectionArgs = selectionArgs(info);
         Cursor cursor = resolver.query(DOWNLOAD_CONTENT_URI, null, selection, selectionArgs, DEFAULT_SORT_ORDER);
-        VolleyLog.d(TAG, "queryDownloadInfo... end");
+        VolleyLog.d("queryDownloadInfo... end");
         return cursor;
     }
 

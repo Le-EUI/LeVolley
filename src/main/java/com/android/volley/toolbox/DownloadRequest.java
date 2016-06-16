@@ -226,7 +226,7 @@ public class DownloadRequest extends Request<Long> {
             VolleyLog.d("don't support breakpoint");
         }
         request.attach(mContext);
-        request.setTag(getTag());
+        request.setTag(getBlockTag());
         if (mRequestQueue != null){
             mRequestQueue.add(request);
         }
@@ -283,24 +283,24 @@ public class DownloadRequest extends Request<Long> {
 
     @Override
     public void cancel() {
-        super.cancel();
-        mRequestQueue.cancelAll(getTag());
+        mRequestQueue.cancelAll(getBlockTag());
     }
 
     @Override
     public void pause() {
-        super.pause();
-        mRequestQueue.pauseAll(getTag());
+        mRequestQueue.pauseAll(getBlockTag());
     }
 
     @Override
     public void resume() {
-        super.resume();
-        mRequestQueue.resumeAll(getTag());
+        mRequestQueue.resumeAll(getBlockTag());
     }
 
-    @Override
-    public Request<?> setTag(Object tag) {
-        return super.setTag(getFilePath()+getUrl());
+    /**
+     * 获得每一个Block的tag
+     * @return
+     */
+    private String getBlockTag(){
+        return getFilePath()+"-"+getUrl();
     }
 }
